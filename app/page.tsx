@@ -137,6 +137,7 @@ export default function Home() {
         </div>
         <nav style={{ display: 'flex', gap: '1.5rem', fontSize: '0.88rem' }}>
           <Link href="/partners" style={{ color: '#ccd', textDecoration: 'none' }}>👥 Partners</Link>
+          <Link href="/pipeline" style={{ color: '#ccd', textDecoration: 'none' }}>🔄 Pipeline</Link>
           <Link href="/news"     style={{ color: '#ccd', textDecoration: 'none' }}>📰 Intelligence</Link>
           <Link href="/drafts"   style={{ color: '#ccd', textDecoration: 'none' }}>📬 Drafts</Link>
           <Link href="/settings" style={{ color: '#ccd', textDecoration: 'none' }}>⚙️ Settings</Link>

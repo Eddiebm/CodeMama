@@ -68,6 +68,22 @@ interface EmailDraft {
   body: string;
 }
 
+// ---- Cultural intelligence notes injected into every prompt ---------------
+const CN_CULTURE_NOTE = `
+CRITICAL — CHINESE BUSINESS CULTURE RULES (region = CN):
+- Address by FAMILY NAME with title. Never use a first name alone (e.g., "Dear Director Chen", not "Dear Wei").
+- Hierarchy is paramount. Do not skip ranks or contact junior staff before senior. If contact title is unknown, address formally: "Dear Colleague".
+- Build relationship before business: open with respect for their organisation, not a hard pitch.
+- Patience signals trustworthiness — do NOT pressure or rush to the ask.
+- Avoid direct references to competition, cost-pressure, or urgency framing — this is seen as disrespectful.
+- Use indirect language for the ask: "we would be honoured to arrange a brief introduction" rather than "I'd welcome a 20-minute call".
+- One email is never enough — relationship building in China is a long game. Acknowledge this respectfully.
+- Never reference pricing, valuation, or financial terms (even more strictly than other regions).`;
+
+function culturalNote(region: Region): string {
+  return region === 'CN' ? CN_CULTURE_NOTE : '';
+}
+
 function buildPharmaPrompt(cfg: ProgramConfig, region: Region, partner: PartnerContext, introTemplate: string): string {
   return `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
 
@@ -101,7 +117,7 @@ STYLE:
 - Reference the partner's therapeutic focus to show you've done your homework
 - Close with a specific low-friction ask (a 20-minute call, not "let me know if interested")
 - Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
-
+${culturalNote(region)}
 SIGN-OFF (exact):
 Best regards,
 ${cfg.sender}
@@ -146,7 +162,7 @@ STYLE:
 - Speak to capital efficiency: what can be achieved with the next tranche, what de-risks the asset
 - Close with a specific, low-friction ask (a 20-minute call)
 - Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
-
+${culturalNote(region)}
 SIGN-OFF (exact):
 Best regards,
 ${cfg.sender}
@@ -156,6 +172,138 @@ ${cfg.company}
 FORMAT — return ONLY valid JSON: {"subject": "...", "body": "..."}`;
 }
 
+// ---- Follow-up prompt: NUDGE (no response received) ----------------------
+function buildNudgePrompt(
+  cfg: ProgramConfig,
+  region: Region,
+  partner: PartnerContext,
+  followUpTemplate: string,
+  daysSince: number,
+  followUpNumber: number,
+  isInvestor: boolean,
+): string {
+  const cnPatience = region === 'CN'
+    ? '\nFor this Chinese recipient: be especially patient and respectful. Do not pressure. Frame this follow-up as maintaining respectful contact, not chasing a response. The subject line should be soft and non-presumptuous.'
+    : '';
+
+  return `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
+
+You previously sent an introductory email to ${partner.name} about ${cfg.indication} — ${cfg.programType} (${isInvestor ? 'investment opportunity' : 'BD/licensing opportunity'}). It has been ${daysSince} days with NO RESPONSE. This is follow-up #${followUpNumber}.
+
+YOUR TASK: Write a brief NUDGE email — they haven't replied yet.
+
+NUDGE RULES:
+- 2–3 short paragraphs MAXIMUM — shorter than the original
+- Do NOT start with "I hope this email finds you well"
+- Open by acknowledging they are busy and may have missed the note — gracious, not passive-aggressive
+- Reference the prior outreach in one sentence. Do not repeat the full pitch.
+- Restate ONLY the single most compelling hook — one clinical/market point or milestone
+- End with an ultra low-friction ask: softer than before ("even a 15-minute exchange when convenient")
+- Subject line must start with "Re: " and be softer than the original
+- Tone: US = brief, direct; EU = measured, gracious; CN = highly respectful, patient, no pressure
+${cnPatience}
+APPROVED LANGUAGE (region: ${region}):
+"${followUpTemplate}"
+
+GUARDRAILS — never include: ${cfg.forbiddenTopics}
+${culturalNote(region)}
+SIGN-OFF (exact):
+Best regards,
+${cfg.sender}
+${cfg.senderTitle}
+${cfg.company}
+
+FORMAT — return ONLY valid JSON: {"subject": "...", "body": "..."}`;
+}
+
+// ---- Follow-up prompt: ADVANCE (they responded, move conversation forward) ---
+function buildAdvancePrompt(
+  cfg: ProgramConfig,
+  region: Region,
+  partner: PartnerContext,
+  responseNote: string,
+  isInvestor: boolean,
+): string {
+  const cnContinuity = region === 'CN'
+    ? '\nFor this Chinese recipient: express genuine gratitude and honour for their response. Be warm but not effusive. Reinforce the long-term relationship angle. Propose next steps with flexibility — do not dictate timing.'
+    : '';
+
+  return `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
+
+A partner at ${partner.name} has RESPONDED to your initial outreach about ${cfg.indication} — ${cfg.programType} (${isInvestor ? 'investment opportunity' : 'BD/licensing opportunity'}).
+
+WHAT THEY SAID / CONTEXT:
+"${responseNote || 'They responded positively / expressed interest'}"
+
+YOUR TASK: Write a brief, warm ADVANCE email — they replied; now move the conversation forward.
+
+ADVANCE RULES:
+- 2–3 short paragraphs MAXIMUM
+- Open by thanking them for their response — genuine and warm, not formulaic
+- Acknowledge what they said (reference the context note above, naturally)
+- Advance the conversation: propose a specific next step (a call, a deck, a brief meeting)
+- For a call: suggest 2 specific time windows (do not just say "let me know when you are free")
+- Attach deck if appropriate — mention it if you will be including materials
+- Subject line: start with "Re: " to thread the conversation
+- Tone: US = warm, direct; EU = measured, professional; CN = respectful, grateful, flexible on timing
+${cnContinuity}
+GUARDRAILS — never include: ${cfg.forbiddenTopics}
+${culturalNote(region)}
+SIGN-OFF (exact):
+Best regards,
+${cfg.sender}
+${cfg.senderTitle}
+${cfg.company}
+
+FORMAT — return ONLY valid JSON: {"subject": "...", "body": "..."}`;
+}
+
+// ---- Shared Claude call + JSON parser ------------------------------------
+
+async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
+  const message = await getAI().messages.create({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 1200,
+    messages: [{ role: 'user', content: userPrompt }],
+    system: systemPrompt,
+  });
+  return message.content[0].type === 'text' ? message.content[0].text : '';
+}
+
+function parseEmailResponse(raw: string, fallbackSubject: string): EmailDraft {
+  const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed.subject && parsed.body) return { subject: parsed.subject, body: parsed.body };
+  } catch { /* fall through */ }
+
+  const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
+  const bodyMatch    = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
+  if (subjectMatch && bodyMatch) {
+    return {
+      subject: subjectMatch[1],
+      body: bodyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
+    };
+  }
+  return { subject: fallbackSubject, body: cleaned };
+}
+
+// ---- Greeting helper (CN-aware) ------------------------------------------
+
+function buildGreeting(partner: PartnerContext, region: Region): string {
+  if (!partner.contactName) return 'Dear Sir/Madam,';
+  const parts = partner.contactName.trim().split(/\s+/);
+  if (region === 'CN') {
+    // CN: family name first in Chinese names, but we may have Western-order names.
+    // Use full name + title if known, otherwise last name only.
+    const lastName = parts[parts.length - 1];
+    return `Dear ${lastName},`;
+  }
+  return `Dear ${parts[0]},`;
+}
+
+// ---- Public: initial outreach email ---------------------------------------
+
 export async function generateOutreachEmail(
   partner: PartnerContext,
   researchContext: string
@@ -163,17 +311,12 @@ export async function generateOutreachEmail(
   const cfg = loadProgramConfig();
   const region = safeRegion(partner.region);
   const introTemplate = LANGUAGE[region].INTRO;
-
   const isInvestor = partner.partnerType === 'INVESTOR';
 
-  const contactGreeting = partner.contactName
-    ? `Dear ${partner.contactName.split(' ')[0]},`
-    : 'Dear Sir/Madam,';
-
+  const contactGreeting = buildGreeting(partner, region);
   const seniorityNote = partner.contactTitle
     ? `Recipient title: "${partner.contactTitle}" — write peer-to-peer at that seniority level.`
     : '';
-
   const researchNote = researchContext
     ? `\nPartner research (use selectively — do not reproduce verbatim):\n${researchContext}`
     : '';
@@ -194,32 +337,68 @@ ${researchNote}
 
 Open with: ${contactGreeting}`;
 
-  const message = await getAI().messages.create({
-    model: 'claude-3-haiku-20240307',
-    max_tokens: 1200,
-    messages: [{ role: 'user', content: userPrompt }],
-    system: systemPrompt,
-  });
+  const raw = await callClaude(systemPrompt, userPrompt);
+  const fallback = `${cfg.indication} — ${isInvestor ? 'Investment Opportunity' : 'BD Opportunity'} | ${cfg.company}`;
+  return parseEmailResponse(raw, fallback);
+}
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '';
-  const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+// ---- Public: nudge email (no reply) ---------------------------------------
 
-  try {
-    const parsed = JSON.parse(cleaned);
-    if (parsed.subject && parsed.body) return { subject: parsed.subject, body: parsed.body };
-  } catch { /* fall through */ }
+export async function generateFollowUpEmail(
+  partner: PartnerContext,
+  daysSince: number,
+  followUpNumber: number,
+): Promise<EmailDraft> {
+  const cfg = loadProgramConfig();
+  const region = safeRegion(partner.region);
+  const followUpTemplate = LANGUAGE[region].FOLLOWUP;
+  const isInvestor = partner.partnerType === 'INVESTOR';
 
-  const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
-  const bodyMatch = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
-  if (subjectMatch && bodyMatch) {
-    return {
-      subject: subjectMatch[1],
-      body: bodyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
-    };
-  }
+  const systemPrompt = buildNudgePrompt(
+    cfg, region, partner, followUpTemplate,
+    daysSince, followUpNumber, isInvestor,
+  );
 
-  return {
-    subject: `${cfg.indication} — ${isInvestor ? 'Investment Opportunity' : 'BD Opportunity'} | ${cfg.company}`,
-    body: cleaned,
-  };
+  const contactGreeting = buildGreeting(partner, region);
+  const userPrompt = `Write the nudge/follow-up email for:
+
+Recipient organisation: ${partner.name}
+Therapeutic / investment focus: ${partner.interest || 'oncology/life sciences'}
+Region: ${region}
+${partner.contactTitle ? `Recipient title: "${partner.contactTitle}"` : ''}
+
+Open with: ${contactGreeting}`;
+
+  const raw = await callClaude(systemPrompt, userPrompt);
+  const fallback = `Re: ${cfg.indication} — ${isInvestor ? 'Investment Opportunity' : 'BD Opportunity'} | ${cfg.company}`;
+  return parseEmailResponse(raw, fallback);
+}
+
+// ---- Public: advance email (they responded — move forward) ---------------
+
+export async function generateAdvanceEmail(
+  partner: PartnerContext,
+  responseNote: string,
+): Promise<EmailDraft> {
+  const cfg = loadProgramConfig();
+  const region = safeRegion(partner.region);
+  const isInvestor = partner.partnerType === 'INVESTOR';
+
+  const systemPrompt = buildAdvancePrompt(
+    cfg, region, partner, responseNote, isInvestor,
+  );
+
+  const contactGreeting = buildGreeting(partner, region);
+  const userPrompt = `Write the advance/reply email for:
+
+Recipient organisation: ${partner.name}
+Therapeutic / investment focus: ${partner.interest || 'oncology/life sciences'}
+Region: ${region}
+${partner.contactTitle ? `Recipient title: "${partner.contactTitle}"` : ''}
+
+Open with: ${contactGreeting}`;
+
+  const raw = await callClaude(systemPrompt, userPrompt);
+  const fallback = `Re: ${cfg.indication} — ${isInvestor ? 'Investment Opportunity' : 'BD Opportunity'} | ${cfg.company}`;
+  return parseEmailResponse(raw, fallback);
 }

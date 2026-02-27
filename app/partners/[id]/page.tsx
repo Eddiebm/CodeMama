@@ -47,6 +47,44 @@ const TYPE_META: Record<PartnerType, { label: string; color: string; bg: string;
 
 type EmailStatus = 'UNCHECKED' | 'VALID' | 'INVALID' | 'NO_EMAIL' | 'CHECKING';
 
+// ---- Pipeline stage helpers ----------------------------------------------
+
+type PipelineStage = 'NOT_STARTED' | 'AWAITING' | 'FOLLOW_UP_DUE' | 'RESPONDED' | 'DONE' | 'OPT_OUT';
+
+const FOLLOW_UP_DAYS: Record<string, number> = { CN: 14, EU: 7, US: 7 };
+
+function computePipelineStage(partner: Partner): PipelineStage {
+  if (partner.status === 'DONE')    return 'DONE';
+  if (partner.status === 'OPT_OUT') return 'OPT_OUT';
+
+  const hasInbound = partner.messages.some(m => m.direction === 'INBOUND');
+  if (hasInbound) return 'RESPONDED';
+
+  const sentDrafts = partner.drafts.filter(d => d.status === 'SENT' && d.sentAt);
+  if (sentDrafts.length === 0) return 'NOT_STARTED';
+
+  const lastSent = sentDrafts.reduce((max, d) => d.sentAt! > max ? d.sentAt! : max, sentDrafts[0].sentAt!);
+  const daysSince = (Date.now() - new Date(lastSent).getTime()) / (1000 * 60 * 60 * 24);
+  const threshold = FOLLOW_UP_DAYS[partner.region] ?? 7;
+  return daysSince >= threshold ? 'FOLLOW_UP_DUE' : 'AWAITING';
+}
+
+function daysSinceLastSent(partner: Partner): number {
+  const sent = partner.drafts.filter(d => d.status === 'SENT' && d.sentAt);
+  if (!sent.length) return 0;
+  const last = sent.reduce((max, d) => d.sentAt! > max ? d.sentAt! : max, sent[0].sentAt!);
+  return Math.floor((Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+const STAGE_META: Record<PipelineStage, { label: string; color: string; bg: string; border: string; icon: string }> = {
+  NOT_STARTED:   { label: 'Not Started',    icon: '🆕', color: '#555',    bg: '#f5f5f5', border: '#ddd' },
+  AWAITING:      { label: 'Awaiting Reply', icon: '📤', color: '#1a56db', bg: '#eef3ff', border: '#b8ccf0' },
+  FOLLOW_UP_DUE: { label: 'Follow-up Due',  icon: '⏰', color: '#b85c00', bg: '#fff8ec', border: '#f0d080' },
+  RESPONDED:     { label: 'Responded',      icon: '💬', color: '#1a6b1a', bg: '#efffef', border: '#99d499' },
+  DONE:          { label: 'Done',           icon: '✅', color: '#777',    bg: '#f9f9f9', border: '#ddd' },
+  OPT_OUT:       { label: 'Opted Out',      icon: '🚫', color: '#c00',    bg: '#fff0f0', border: '#f0aaaa' },
+};
+
 export default function PartnerDetail() {
   const { id } = useParams<{ id: string }>();
   const [partner, setPartner] = useState<Partner | null>(null);
@@ -55,7 +93,7 @@ export default function PartnerDetail() {
 
   // Outreach state
   const [generating, setGenerating] = useState(false);
-  const [activeDraft, setActiveDraft] = useState<{ draftId: string; subject: string; body: string } | null>(null);
+  const [activeDraft, setActiveDraft] = useState<{ draftId: string; subject: string; body: string; draftType?: string } | null>(null);
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
   const [includeDeck, setIncludeDeck] = useState(true);
@@ -63,6 +101,12 @@ export default function PartnerDetail() {
   const [sentMessage, setSentMessage] = useState('');
   const [error, setError] = useState('');
   const [typeChanging, setTypeChanging] = useState(false);
+
+  // Follow-up state
+  const [followUpGenerating, setFollowUpGenerating] = useState(false);
+  const [logResponseNote, setLogResponseNote]       = useState('');
+  const [logResponseOpen, setLogResponseOpen]       = useState(false);
+  const [loggingResponse, setLoggingResponse]       = useState(false);
 
   // News state
   const [newsItems, setNewsItems]   = useState<NewsItem[]>([]);
@@ -140,6 +184,76 @@ export default function PartnerDetail() {
       setError(e.message);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function generateNudge() {
+    if (!partner) return;
+    setFollowUpGenerating(true);
+    setError('');
+    setActiveDraft(null);
+    setSentMessage('');
+    try {
+      const days = daysSinceLastSent(partner);
+      const res = await fetch(`/api/partners/${id}/follow-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'nudge', daysSince: days }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setActiveDraft({ draftId: data.draftId, subject: data.subject, body: data.body, draftType: 'nudge' });
+      setEditedSubject(data.subject);
+      setEditedBody(data.body);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setFollowUpGenerating(false);
+    }
+  }
+
+  async function generateAdvance() {
+    if (!partner) return;
+    setFollowUpGenerating(true);
+    setError('');
+    setActiveDraft(null);
+    setSentMessage('');
+    try {
+      const lastInbound = partner.messages.filter(m => m.direction === 'INBOUND').slice(-1)[0];
+      const responseNote = lastInbound?.body || 'They expressed interest in learning more.';
+      const res = await fetch(`/api/partners/${id}/follow-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'advance', responseNote }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setActiveDraft({ draftId: data.draftId, subject: data.subject, body: data.body, draftType: 'advance' });
+      setEditedSubject(data.subject);
+      setEditedBody(data.body);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setFollowUpGenerating(false);
+    }
+  }
+
+  async function logResponse() {
+    setLoggingResponse(true);
+    try {
+      const res = await fetch(`/api/partners/${id}/log-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: logResponseNote || 'Response received (logged manually)' }),
+      });
+      if (!res.ok) throw new Error('Failed to log response');
+      setLogResponseNote('');
+      setLogResponseOpen(false);
+      fetchPartner();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoggingResponse(false);
     }
   }
 
@@ -263,6 +377,141 @@ export default function PartnerDetail() {
         </div>
       )}
 
+      {/* ── PIPELINE STAGE BANNER ── */}
+      {(() => {
+        const stage = computePipelineStage(partner);
+        const sm = STAGE_META[stage];
+        const days = daysSinceLastSent(partner);
+        const followUpCount = partner.drafts.filter(d => d.category === 'FOLLOW_UP' && d.status === 'SENT').length;
+        return (
+          <div style={{
+            marginTop: '1.25rem',
+            padding: '0.75rem 1rem',
+            background: sm.bg,
+            border: `1px solid ${sm.border}`,
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+          }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: sm.color }}>
+                {sm.icon} {sm.label}
+              </span>
+              {stage === 'FOLLOW_UP_DUE' && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#b85c00' }}>
+                  — {days} days since last contact{followUpCount > 0 ? ` · ${followUpCount} follow-up${followUpCount > 1 ? 's' : ''} already sent` : ''}
+                </span>
+              )}
+              {stage === 'AWAITING' && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#555' }}>
+                  — sent {days}d ago, waiting for reply
+                </span>
+              )}
+              {stage === 'RESPONDED' && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#1a6b1a' }}>
+                  — reply received · generate a response email below
+                </span>
+              )}
+            </div>
+            {/* Stage-specific quick actions */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {stage === 'FOLLOW_UP_DUE' && !activeDraft && (
+                <button
+                  onClick={generateNudge}
+                  disabled={followUpGenerating}
+                  style={{
+                    padding: '0.35rem 0.9rem',
+                    background: followUpGenerating ? '#aaa' : '#b85c00',
+                    color: '#fff', border: 'none', borderRadius: '5px',
+                    fontSize: '0.82rem', fontWeight: 600,
+                    cursor: followUpGenerating ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {followUpGenerating ? '⏳ Generating…' : '↩ Generate Nudge Email'}
+                </button>
+              )}
+              {stage === 'RESPONDED' && !activeDraft && (
+                <>
+                  {!logResponseOpen && (
+                    <button
+                      onClick={() => setLogResponseOpen(true)}
+                      style={{
+                        padding: '0.35rem 0.9rem',
+                        background: '#fff', color: '#1a6b1a',
+                        border: '1px solid #99d499', borderRadius: '5px',
+                        fontSize: '0.82rem', cursor: 'pointer',
+                      }}
+                    >
+                      📝 Add Response Note
+                    </button>
+                  )}
+                  <button
+                    onClick={generateAdvance}
+                    disabled={followUpGenerating}
+                    style={{
+                      padding: '0.35rem 0.9rem',
+                      background: followUpGenerating ? '#aaa' : '#1a6b1a',
+                      color: '#fff', border: 'none', borderRadius: '5px',
+                      fontSize: '0.82rem', fontWeight: 600,
+                      cursor: followUpGenerating ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {followUpGenerating ? '⏳ Generating…' : '💬 Generate Reply Email'}
+                  </button>
+                </>
+              )}
+              {stage === 'AWAITING' && (
+                <button
+                  onClick={() => setLogResponseOpen(true)}
+                  style={{
+                    padding: '0.35rem 0.9rem',
+                    background: '#fff', color: '#1a56db',
+                    border: '1px solid #b8ccf0', borderRadius: '5px',
+                    fontSize: '0.82rem', cursor: 'pointer',
+                  }}
+                >
+                  📥 Log a Response
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Log response inline form */}
+      {logResponseOpen && (
+        <div style={{ marginTop: '0.75rem', padding: '0.875rem 1rem', background: '#f9fff9', border: '1px solid #99d499', borderRadius: '7px' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem', color: '#1a6b1a' }}>
+            📥 Log their response
+          </div>
+          <textarea
+            value={logResponseNote}
+            onChange={e => setLogResponseNote(e.target.value)}
+            placeholder="Brief note about what they said — e.g. 'Interested, asked for deck' or 'Out of office, follow up in March'"
+            rows={2}
+            style={{ width: '100%', padding: '0.45rem 0.6rem', border: '1px solid #ccc', borderRadius: '5px', fontSize: '0.85rem', lineHeight: '1.5', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button
+              onClick={logResponse}
+              disabled={loggingResponse}
+              style={{ padding: '0.35rem 0.9rem', background: '#1a6b1a', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              {loggingResponse ? 'Saving…' : '✓ Save Response'}
+            </button>
+            <button
+              onClick={() => { setLogResponseOpen(false); setLogResponseNote(''); }}
+              style={{ padding: '0.35rem 0.9rem', background: '#fff', color: '#555', border: '1px solid #ddd', borderRadius: '5px', fontSize: '0.82rem', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── OUTREACH SECTION ── */}
       <div style={{ marginTop: '2rem', borderTop: '2px solid #e8e8e8', paddingTop: '1.5rem' }}>
         <h2 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>📧 Outreach Email</h2>
@@ -316,8 +565,10 @@ export default function PartnerDetail() {
           <div style={{ marginTop: '1.25rem', border: '1px solid #b8ccf0', borderRadius: '8px', background: '#f5f8ff', padding: '1.25rem' }}>
             <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#1a3c7a', fontSize: '0.95rem' }}>
               📝 Review &amp; Edit Draft
+              {activeDraft?.draftType === 'nudge'   && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#fff8ec', color: '#b85c00', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>↩ Nudge (no reply)</span>}
+              {activeDraft?.draftType === 'advance'  && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#efffef', color: '#1a6b1a', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>💬 Reply (advance)</span>}
               <span style={{ fontWeight: 400, fontSize: '0.82rem', color: '#555', marginLeft: '0.5rem' }}>
-                — you must approve before anything is sent
+                — approve before sending
               </span>
             </div>
 
