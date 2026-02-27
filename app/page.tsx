@@ -26,11 +26,42 @@ interface DailyStats {
 
 interface DailyData {
   date: string;
+  isToday: boolean;
   totalPartners: number;
   totalEligible: number;
   recommendations: DailyPartner[];
   stats: DailyStats;
 }
+
+// ---- date helpers --------------------------------------------------------
+function todayStr(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function offsetDate(base: string, days: number): string {
+  const d = new Date(base + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function formatDateLabel(dateStr: string): string {
+  const today  = todayStr();
+  const tomorrow = offsetDate(today, 1);
+  const yesterday = offsetDate(today, -1);
+  if (dateStr === today)     return 'Today';
+  if (dateStr === tomorrow)  return 'Tomorrow';
+  if (dateStr === yesterday) return 'Yesterday';
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function formatFullDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+const MAX_FUTURE_DAYS = 14;
+const MAX_PAST_DAYS   = 30;
 
 const TYPE_STYLE: Record<string, { color: string; bg: string }> = {
   PHARMA:   { color: '#1a56db', bg: '#eef3ff' },
@@ -58,19 +89,21 @@ function ScoreDot({ score }: { score: number }) {
 }
 
 export default function Home() {
-  const [daily, setDaily]       = useState<DailyData | null>(null);
-  const [loading, setLoading]   = useState(true);
+  const [daily, setDaily]           = useState<DailyData | null>(null);
+  const [loading, setLoading]       = useState(true);
   const [dailyLimit, setDailyLimit] = useState(10);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr());
+  const [expanded, setExpanded]     = useState<string | null>(null);
 
   useEffect(() => {
-    loadDaily(dailyLimit);
-  }, [dailyLimit]);
+    loadDaily(dailyLimit, selectedDate);
+  }, [dailyLimit, selectedDate]);
 
-  async function loadDaily(limit: number) {
+  async function loadDaily(limit: number, date: string) {
     setLoading(true);
+    setExpanded(null);
     try {
-      const res = await fetch(`/api/outreach/daily?limit=${limit}`);
+      const res = await fetch(`/api/outreach/daily?limit=${limit}&date=${date}`);
       const data = await res.json();
       setDaily(data);
     } catch (e) {
@@ -80,7 +113,18 @@ export default function Home() {
     }
   }
 
-  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  function navigate(days: number) {
+    const next = offsetDate(selectedDate, days);
+    const today = todayStr();
+    const minDate = offsetDate(today, -MAX_PAST_DAYS);
+    const maxDate = offsetDate(today, MAX_FUTURE_DAYS);
+    if (next >= minDate && next <= maxDate) setSelectedDate(next);
+  }
+
+  const today = todayStr();
+  const canGoBack    = selectedDate > offsetDate(today, -MAX_PAST_DAYS);
+  const canGoForward = selectedDate < offsetDate(today, MAX_FUTURE_DAYS);
+  const isToday      = selectedDate === today;
 
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f7f8fc' }}>
@@ -104,7 +148,7 @@ export default function Home() {
         {/* ── Header ── */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#1a1a2e' }}>Good morning, Eddie 👋</h1>
-          <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>{today}</p>
+          <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>{formatFullDate(todayStr())}</p>
         </div>
 
         {/* ── Stats row ── */}
@@ -126,29 +170,113 @@ export default function Home() {
 
         {/* ── Today's Outreach ── */}
         <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '12px', overflow: 'hidden', marginBottom: '2rem' }}>
-          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#1a1a2e' }}>🎯 Today's Outreach</h2>
-              <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: '#888' }}>
-                Prioritized by engagement score — diversified across partner type and region
-              </p>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f0f0f0' }}>
+            {/* Title row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#1a1a2e' }}>🎯 Outreach List</h2>
+                <p style={{ margin: '0.1rem 0 0', fontSize: '0.8rem', color: '#888' }}>
+                  Scored · diversified · rotated daily
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <select
+                  value={dailyLimit}
+                  onChange={e => setDailyLimit(parseInt(e.target.value))}
+                  style={{ padding: '0.35rem 0.6rem', border: '1px solid #ddd', borderRadius: '5px', fontSize: '0.82rem', background: '#fff' }}
+                >
+                  {[5, 8, 10, 15, 20].map(n => <option key={n} value={n}>{n} per day</option>)}
+                </select>
+                <button
+                  onClick={() => loadDaily(dailyLimit, selectedDate)}
+                  disabled={loading}
+                  style={{ padding: '0.35rem 0.8rem', border: '1px solid #ddd', borderRadius: '5px', background: '#fff', fontSize: '0.82rem', cursor: 'pointer', color: '#555' }}
+                >
+                  ↻
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <select
-                value={dailyLimit}
-                onChange={e => setDailyLimit(parseInt(e.target.value))}
-                style={{ padding: '0.35rem 0.6rem', border: '1px solid #ddd', borderRadius: '5px', fontSize: '0.82rem', background: '#fff' }}
-              >
-                {[5, 8, 10, 15, 20].map(n => <option key={n} value={n}>{n} today</option>)}
-              </select>
+
+            {/* Date navigator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
-                onClick={() => loadDaily(dailyLimit)}
-                disabled={loading}
-                style={{ padding: '0.35rem 0.8rem', border: '1px solid #ddd', borderRadius: '5px', background: '#fff', fontSize: '0.82rem', cursor: 'pointer', color: '#555' }}
+                onClick={() => navigate(-1)}
+                disabled={!canGoBack}
+                style={{
+                  padding: '0.3rem 0.75rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  background: '#fff',
+                  fontSize: '0.82rem',
+                  cursor: canGoBack ? 'pointer' : 'not-allowed',
+                  color: canGoBack ? '#333' : '#ccc',
+                }}
               >
-                ↻ Refresh
+                ← Prev
+              </button>
+
+              <div style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: '0.3rem 0.75rem',
+                border: `1px solid ${isToday ? '#1a56db' : '#ddd'}`,
+                borderRadius: '5px',
+                background: isToday ? '#eef3ff' : '#fafafa',
+                fontSize: '0.88rem',
+                fontWeight: isToday ? 700 : 500,
+                color: isToday ? '#1a56db' : '#444',
+              }}>
+                {formatDateLabel(selectedDate)}
+                {!isToday && (
+                  <span style={{ fontSize: '0.76rem', color: '#aaa', marginLeft: '0.4rem' }}>
+                    ({selectedDate})
+                  </span>
+                )}
+              </div>
+
+              {!isToday && (
+                <button
+                  onClick={() => setSelectedDate(todayStr())}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    border: '1px solid #1a56db',
+                    borderRadius: '5px',
+                    background: '#eef3ff',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    color: '#1a56db',
+                    fontWeight: 600,
+                  }}
+                >
+                  Today
+                </button>
+              )}
+
+              <button
+                onClick={() => navigate(1)}
+                disabled={!canGoForward}
+                style={{
+                  padding: '0.3rem 0.75rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  background: '#fff',
+                  fontSize: '0.82rem',
+                  cursor: canGoForward ? 'pointer' : 'not-allowed',
+                  color: canGoForward ? '#333' : '#ccc',
+                }}
+              >
+                Next →
               </button>
             </div>
+
+            {/* Non-today label */}
+            {!isToday && (
+              <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: '#999', fontStyle: 'italic' }}>
+                {selectedDate < today
+                  ? '📅 Past batch — showing the rotation that was queued for this date'
+                  : '🔮 Future preview — this is who will surface if you haven\'t reached them yet'}
+              </p>
+            )}
           </div>
 
           {loading && <p style={{ padding: '1.5rem', color: '#888', fontSize: '0.9rem' }}>Loading recommendations…</p>}
