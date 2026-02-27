@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+coare/__init__.py
+coare/cli.py
+coare/models.py
+coare/outreach.py
+coare.egg-info/PKG-INFO
+coare.egg-info/SOURCES.txt
+coare.egg-info/dependency_links.txt
+coare.egg-info/entry_points.txt
+coare.egg-info/requires.txt
+coare.egg-info/top_level.txt
+tests/test_outreach.py
