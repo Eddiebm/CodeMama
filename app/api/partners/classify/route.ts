@@ -28,7 +28,7 @@ const BIOTECH_COMPANY_KEYWORDS = [
   'biopharma', 'genomics', 'proteomics', 'immunotherapy', 'bio ',
 ];
 
-export function classifyPartner(name: string, contactTitle: string | null): string {
+function classifyPartner(name: string, contactTitle: string | null): string {
   const n = (name || '').toLowerCase();
   const t = (contactTitle || '').toLowerCase();
 
