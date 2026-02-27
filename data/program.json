@@ -1,10 +1,14 @@
 {
   "company": "COARE Holdings",
   "sender": "Eddie Bannerman-Menson",
+  "senderTitle": "Executive Vice President, Business Development",
   "indication": "High-Grade Serous Ovarian Cancer (HGSOC)",
   "stage": "Preclinical",
   "programType": "Combination therapy",
   "emailScope": "We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program. We welcome a high-level discussion if of interest.",
   "goalDescription": "Identify potential licensing, co-development, or partnership discussions",
-  "forbiddenTopics": "pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy, clinical projections"
+  "forbiddenTopics": "pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy, clinical projections",
+  "clinicalContext": "Approximately 80% of women with HGSOC will relapse following first-line therapy, and median survival after platinum-resistant relapse remains under 12 months. Despite recent approvals in PARP inhibitors and bevacizumab, the majority of patients still lack durable response options.",
+  "marketContext": "HGSOC represents the most lethal gynecologic malignancy, with approximately 314,000 new diagnoses globally each year and over 207,000 deaths. In the US alone, roughly 20,000 women are diagnosed annually. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030, driven by unmet need in the relapsed/refractory setting.",
+  "partnerHook": "Where we know a partner has an oncology or gynecologic program, reference the strategic alignment. Where the fit is less obvious, frame HGSOC as an adjacency to their existing oncology franchise."
 }

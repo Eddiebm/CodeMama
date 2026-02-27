@@ -14,12 +14,16 @@ function safeRegion(r: string | undefined): Region {
 export interface ProgramConfig {
   company: string;
   sender: string;
+  senderTitle: string;
   indication: string;
   stage: string;
   programType: string;
   emailScope: string;
   goalDescription: string;
   forbiddenTopics: string;
+  clinicalContext: string;
+  marketContext: string;
+  partnerHook: string;
 }
 
 export function loadProgramConfig(): ProgramConfig {
@@ -27,16 +31,19 @@ export function loadProgramConfig(): ProgramConfig {
   try {
     return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
   } catch {
-    // Safe defaults if file is missing
     return {
       company: 'COARE Holdings',
       sender: 'Eddie Bannerman-Menson',
+      senderTitle: 'Executive Vice President, Business Development',
       indication: 'High-Grade Serous Ovarian Cancer (HGSOC)',
       stage: 'Preclinical',
       programType: 'Combination therapy',
       emailScope: 'We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program.',
       goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
-      forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy, clinical projections',
+      forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy',
+      clinicalContext: 'Approximately 80% of women with HGSOC will relapse following first-line therapy. Median survival after platinum-resistant relapse remains under 12 months.',
+      marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year and over 207,000 deaths. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
+      partnerHook: 'Where the partner has an oncology program, reference strategic alignment. Where less obvious, frame HGSOC as an adjacency to their existing oncology franchise.',
     };
   }
 }
@@ -67,49 +74,57 @@ export async function generateOutreachEmail(
     : 'Dear Sir/Madam,';
 
   const seniorityNote = partner.contactTitle
-    ? `The recipient's title is "${partner.contactTitle}" — calibrate formality accordingly.`
+    ? `Recipient title: "${partner.contactTitle}" — write peer-to-peer at that seniority level.`
     : '';
 
   const researchNote = researchContext
-    ? `\n\nCompany research context (use to personalize, do not copy verbatim):\n${researchContext}`
+    ? `\nPartner research (use selectively to personalise — do not reproduce verbatim):\n${researchContext}`
     : '';
 
-  const systemPrompt = `You are a business development writer for ${cfg.company}, a life sciences company.
+  const systemPrompt = `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
 
-YOUR TASK: Write a concise, professional introductory outreach email to a pharmaceutical/biotech partner.
+You are writing a direct, senior-level business development email to a potential pharmaceutical or biotech partner. Your voice is authoritative, commercially fluent, and concise — the way a seasoned EVP BD writes, not a junior sales rep. You get to the point, demonstrate sector knowledge, and make the reader feel you understand their world.
 
-ABOUT ${cfg.company.toUpperCase()}:
+ABOUT THE PROGRAM:
+- Company: ${cfg.company}
+- Indication: ${cfg.indication}
+- Type: ${cfg.programType}
 - Stage: ${cfg.stage}
-- Program: ${cfg.indication} — ${cfg.programType}
-- Goal: ${cfg.goalDescription}
-- Sender: ${cfg.sender}, ${cfg.company}
+- BD objective: ${cfg.goalDescription}
 
-APPROVED LANGUAGE ANCHOR (region: ${region}):
+CLINICAL CONTEXT (weave in 1–2 of these facts naturally — do not list them all):
+${cfg.clinicalContext}
+
+MARKET CONTEXT (use selectively to frame commercial opportunity):
+${cfg.marketContext}
+
+PARTNER PERSONALISATION GUIDANCE:
+${cfg.partnerHook}
+
+APPROVED LANGUAGE ANCHOR — your email must stay consistent with this register (region: ${region}):
 "${introTemplate}"
-Your email must be consistent with this tone and content — this is your guardrail.
-Email scope guidance: ${cfg.emailScope}
 
-STRICT RULES — NEVER include:
-- ${cfg.forbiddenTopics}
-- Any claims not supportable from a ${cfg.stage.toLowerCase()} stage
+GUARDRAILS — never include:
+${cfg.forbiddenTopics}
+Never make claims that cannot be supported at ${cfg.stage.toLowerCase()} stage.
 
-TONE BY REGION:
-- US: Direct, concise, collegial
-- EU: Measured, professional, slightly formal
-- CN: Formal, respectful, relationship-oriented
+STYLE RULES:
+- 3–4 tight paragraphs, no bullet points in the email body
+- Open with a clinical or market insight that creates urgency, not a generic "I hope you are well"
+- Reference what you know about the partner's therapeutic focus to show relevance
+- Close with a specific, low-friction ask (a 20-minute call, not "let me know if interested")
+- Region tone — US: direct and collegial; EU: measured and formal; CN: respectful and relationship-first
 
-FORMAT — return ONLY valid JSON, nothing else:
-{
-  "subject": "short subject line (max 10 words)",
-  "body": "full email text including greeting and sign-off"
-}
-
-The body should be 3–4 short paragraphs. End with:
+SIGN-OFF (use exactly):
 Best regards,
 ${cfg.sender}
-${cfg.company}`;
+${cfg.senderTitle}
+${cfg.company}
 
-  const userPrompt = `Write a personalized introductory outreach email for:
+FORMAT — return ONLY valid JSON, nothing else:
+{"subject": "...", "body": "..."}`;
+
+  const userPrompt = `Write the outreach email for:
 
 Company: ${partner.name}
 Therapeutic focus: ${partner.interest || 'oncology/life sciences'}
@@ -117,18 +132,16 @@ Region: ${region}
 ${seniorityNote}
 ${researchNote}
 
-Opening: ${contactGreeting}`;
+Open with: ${contactGreeting}`;
 
   const message = await getAI().messages.create({
     model: 'claude-3-haiku-20240307',
-    max_tokens: 1024,
+    max_tokens: 1200,
     messages: [{ role: 'user', content: userPrompt }],
     system: systemPrompt,
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '';
-
-  // Parse JSON response — Claude sometimes uses real newlines inside JSON strings
   const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
 
   // Strategy 1: direct JSON.parse
@@ -139,7 +152,7 @@ Opening: ${contactGreeting}`;
     }
   } catch { /* fall through */ }
 
-  // Strategy 2: regex extraction (handles multiline strings)
+  // Strategy 2: regex extraction (handles real newlines inside JSON strings)
   const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
   const bodyMatch = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
   if (subjectMatch && bodyMatch) {
@@ -151,7 +164,7 @@ Opening: ${contactGreeting}`;
 
   // Strategy 3: plain text fallback
   return {
-    subject: `Introduction: ${cfg.company} — ${partner.name}`,
+    subject: `${cfg.indication} BD Opportunity — ${cfg.company}`,
     body: cleaned,
   };
 }

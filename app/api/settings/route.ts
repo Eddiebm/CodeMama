@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Validate required fields
-    const required = ['company', 'sender', 'indication', 'stage', 'programType', 'emailScope', 'goalDescription', 'forbiddenTopics'];
+    const required = ['company', 'sender', 'senderTitle', 'indication', 'stage', 'programType', 'emailScope', 'goalDescription', 'forbiddenTopics', 'clinicalContext', 'marketContext', 'partnerHook'];
     for (const field of required) {
       if (!body[field] || body[field].toString().trim() === '') {
         return NextResponse.json({ error: `"${field}" is required` }, { status: 400 });

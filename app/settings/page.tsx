@@ -5,23 +5,61 @@ import { useEffect, useState } from 'react';
 interface Config {
   company: string;
   sender: string;
+  senderTitle: string;
   indication: string;
   stage: string;
   programType: string;
   emailScope: string;
   goalDescription: string;
   forbiddenTopics: string;
+  clinicalContext: string;
+  marketContext: string;
+  partnerHook: string;
 }
 
-const FIELD_META: { key: keyof Config; label: string; hint: string; multiline?: boolean }[] = [
-  { key: 'company',         label: 'Company Name',         hint: 'e.g. COARE Holdings' },
-  { key: 'sender',          label: 'Sender Name',          hint: 'e.g. Eddie Bannerman-Menson' },
-  { key: 'indication',      label: 'Indication / Disease', hint: 'e.g. High-Grade Serous Ovarian Cancer (HGSOC)' },
-  { key: 'stage',           label: 'Development Stage',    hint: 'e.g. Preclinical, Phase 1, Phase 2' },
-  { key: 'programType',     label: 'Program Type',         hint: 'e.g. Combination therapy, Small molecule, ADC' },
-  { key: 'emailScope',      label: 'Email Scope / Pitch',  hint: 'One sentence that anchors what the email is about. This directly shapes the AI output.', multiline: true },
-  { key: 'goalDescription', label: 'Partnership Goal',     hint: 'e.g. Identify potential licensing, co-development, or partnership discussions' },
-  { key: 'forbiddenTopics', label: 'Off-limits Topics',   hint: 'Comma-separated topics the AI must never include in emails', multiline: true },
+type SectionKey = 'identity' | 'program' | 'intelligence' | 'guardrails';
+
+const SECTIONS: { key: SectionKey; title: string; subtitle: string; fields: { key: keyof Config; label: string; hint: string; multiline?: boolean; rows?: number }[] }[] = [
+  {
+    key: 'identity',
+    title: '👤 Sender Identity',
+    subtitle: 'Who is writing the email',
+    fields: [
+      { key: 'company',      label: 'Company Name',  hint: 'e.g. COARE Holdings' },
+      { key: 'sender',       label: 'Your Name',     hint: 'e.g. Eddie Bannerman-Menson' },
+      { key: 'senderTitle',  label: 'Your Title',    hint: 'e.g. Executive Vice President, Business Development' },
+    ],
+  },
+  {
+    key: 'program',
+    title: '🔬 Program Details',
+    subtitle: 'The asset you are licensing or partnering',
+    fields: [
+      { key: 'indication',      label: 'Indication / Disease',  hint: 'Be specific — e.g. High-Grade Serous Ovarian Cancer (HGSOC), not just "ovarian cancer"' },
+      { key: 'stage',           label: 'Development Stage',     hint: 'e.g. Preclinical, Phase 1, Phase 2, IND-enabling' },
+      { key: 'programType',     label: 'Program / Asset Type',  hint: 'e.g. Combination therapy, Small molecule, ADC, Bispecific' },
+      { key: 'goalDescription', label: 'BD Objective',          hint: 'e.g. Identify potential licensing, co-development, or regional partnership discussions' },
+      { key: 'emailScope',      label: 'Email Opening Anchor',  hint: 'One sentence: the core pitch the AI must stay consistent with in every email', multiline: true, rows: 2 },
+    ],
+  },
+  {
+    key: 'intelligence',
+    title: '📊 Clinical & Market Intelligence',
+    subtitle: 'Facts the AI weaves in to make emails commercially compelling',
+    fields: [
+      { key: 'clinicalContext', label: 'Clinical Context', hint: 'Disease burden, unmet need, relapse rates, survival data. The AI picks 1–2 facts per email — not all of them.', multiline: true, rows: 4 },
+      { key: 'marketContext',   label: 'Market Context',   hint: 'Patient numbers, market size, regional data, competitive landscape. Used to frame commercial opportunity.', multiline: true, rows: 4 },
+      { key: 'partnerHook',     label: 'Partner Relevance Guidance', hint: 'How should the AI connect COARE\'s program to partners with different therapeutic focuses?', multiline: true, rows: 3 },
+    ],
+  },
+  {
+    key: 'guardrails',
+    title: '🚧 Guardrails',
+    subtitle: 'Topics the AI must never include — GPCE compliance',
+    fields: [
+      { key: 'forbiddenTopics', label: 'Off-limits Topics', hint: 'Comma-separated. These are hard stops — the AI will never include them regardless of partner profile.', multiline: true, rows: 3 },
+    ],
+  },
 ];
 
 export default function SettingsPage() {
@@ -62,34 +100,43 @@ export default function SettingsPage() {
   if (!config) return <p style={{ padding: '2rem' }}>Loading…</p>;
 
   return (
-    <main style={{ padding: '2rem', maxWidth: '680px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
       <a href="/" style={{ fontSize: '0.88rem', color: '#555', textDecoration: 'none' }}>← Back</a>
 
-      <h1 style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '1.4rem' }}>⚙️ Program Settings</h1>
-      <p style={{ color: '#666', fontSize: '0.88rem', marginBottom: '1.75rem' }}>
-        These values control what the AI writes in every outreach email. Update them whenever your program name, indication, or pitch evolves.
+      <h1 style={{ marginTop: '0.75rem', marginBottom: '0.2rem', fontSize: '1.4rem' }}>⚙️ Program Settings</h1>
+      <p style={{ color: '#666', fontSize: '0.88rem', marginBottom: '2rem', lineHeight: '1.5' }}>
+        Everything the AI reads before writing an outreach email. Update the indication, add new clinical data, or sharpen the pitch — the next email you generate reflects it immediately.
       </p>
 
-      {FIELD_META.map(({ key, label, hint, multiline }) => (
-        <div key={key} style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.3rem', color: '#222' }}>
-            {label}
-          </label>
-          {multiline ? (
-            <textarea
-              value={config[key]}
-              onChange={e => update(key, e.target.value)}
-              rows={3}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '5px', fontSize: '0.9rem', lineHeight: '1.5', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
-            />
-          ) : (
-            <input
-              value={config[key]}
-              onChange={e => update(key, e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '5px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-            />
-          )}
-          <p style={{ fontSize: '0.78rem', color: '#888', margin: '0.2rem 0 0' }}>{hint}</p>
+      {SECTIONS.map(section => (
+        <div key={section.key} style={{ marginBottom: '2rem' }}>
+          <div style={{ borderBottom: '2px solid #e8e8e8', paddingBottom: '0.4rem', marginBottom: '1.1rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1rem' }}>{section.title}</h2>
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: '#777' }}>{section.subtitle}</p>
+          </div>
+
+          {section.fields.map(({ key, label, hint, multiline, rows }) => (
+            <div key={key} style={{ marginBottom: '1.1rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.86rem', marginBottom: '0.28rem', color: '#222' }}>
+                {label}
+              </label>
+              {multiline ? (
+                <textarea
+                  value={config[key]}
+                  onChange={e => update(key, e.target.value)}
+                  rows={rows || 3}
+                  style={{ width: '100%', padding: '0.5rem 0.6rem', border: '1px solid #ccc', borderRadius: '5px', fontSize: '0.88rem', lineHeight: '1.55', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+              ) : (
+                <input
+                  value={config[key]}
+                  onChange={e => update(key, e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem 0.6rem', border: '1px solid #ccc', borderRadius: '5px', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                />
+              )}
+              <p style={{ fontSize: '0.76rem', color: '#888', margin: '0.2rem 0 0', lineHeight: '1.4' }}>{hint}</p>
+            </div>
+          ))}
         </div>
       ))}
 
@@ -99,12 +146,12 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
         <button
           onClick={save}
           disabled={saving}
           style={{
-            padding: '0.6rem 1.5rem',
+            padding: '0.65rem 1.75rem',
             background: saving ? '#aaa' : '#1a56db',
             color: '#fff',
             border: 'none',
@@ -116,11 +163,11 @@ export default function SettingsPage() {
         >
           {saving ? 'Saving…' : '💾 Save Changes'}
         </button>
-        {saved && <span style={{ color: '#1a6b1a', fontSize: '0.88rem' }}>✅ Saved — next generated email will use these settings</span>}
-      </div>
-
-      <div style={{ marginTop: '2rem', padding: '1rem', background: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '6px', fontSize: '0.83rem', color: '#555' }}>
-        <strong>How this works:</strong> Every time you click "Generate Outreach Email" on a partner page, the AI reads these settings fresh. Change them here and the very next email will reflect the update — no server restart needed.
+        {saved && (
+          <span style={{ color: '#1a6b1a', fontSize: '0.88rem' }}>
+            ✅ Saved — next generated email will use these settings
+          </span>
+        )}
       </div>
     </main>
   );
