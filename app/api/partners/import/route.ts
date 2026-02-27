@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import * as XLSX from 'xlsx';
 
-export const config = { api: { bodyParser: { sizeLimit: '20mb' } } };
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 function countryToRegion(country: string): string {
   const c = (country || '').toLowerCase().trim();
