@@ -15,6 +15,17 @@ export default async function PartnerDetail({ params }: { params: { id: string }
       <p>Region: <strong>{partner.region}</strong> | Status: <strong>{partner.status}</strong></p>
       {partner.humanRequired && <p style={{ color: 'red' }}>⚠️ HUMAN REQUIRED</p>}
 
+      {(partner.contactName || partner.contactEmail) && (
+        <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#fff', border: '1px solid #eee', display: 'inline-block' }}>
+          <strong>Contact</strong><br />
+          {partner.contactName && <span>{partner.contactName}</span>}
+          {partner.contactTitle && <span style={{ color: '#666' }}> — {partner.contactTitle}</span>}
+          {partner.contactEmail && (
+            <><br /><a href={`mailto:${partner.contactEmail}`}>{partner.contactEmail}</a></>
+          )}
+        </div>
+      )}
+
       <h2 style={{ marginTop: '2rem' }}>Messages</h2>
       {partner.messages.length === 0 && <p>No messages yet.</p>}
       {partner.messages.map(m => (

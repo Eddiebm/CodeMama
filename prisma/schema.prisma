@@ -15,6 +15,9 @@ model Partner {
   status        String    @default("NEW")
   lastContactAt DateTime?
   humanRequired Boolean   @default(false)
+  contactName   String?
+  contactEmail  String?
+  contactTitle  String?
   messages      Message[]
   drafts        Draft[]
   createdAt     DateTime  @default(now())

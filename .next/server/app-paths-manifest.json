@@ -1,8 +1,0 @@
-{
-  "/api/partners/route": "app/api/partners/route.js",
-  "/api/drafts/route": "app/api/drafts/route.js",
-  "/page": "app/page.js",
-  "/partners/[id]/page": "app/partners/[id]/page.js",
-  "/partners/page": "app/partners/page.js",
-  "/drafts/page": "app/drafts/page.js"
-}
