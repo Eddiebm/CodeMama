@@ -1,49 +1,319 @@
-import { db } from '@/lib/db';
+'use client';
 
-export default async function PartnerDetail({ params }: { params: { id: string } }) {
-  const partner = await db.partner.findUnique({
-    where: { id: params.id },
-    include: { messages: { orderBy: { createdAt: 'asc' } }, drafts: true },
-  });
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 
-  if (!partner) return <p style={{ padding: '2rem' }}>Partner not found.</p>;
+interface Partner {
+  id: string;
+  name: string;
+  region: string;
+  status: string;
+  interest: string;
+  humanRequired: boolean;
+  contactName?: string;
+  contactEmail?: string;
+  contactTitle?: string;
+  lastContactAt?: string;
+  messages: { id: string; direction: string; body: string; createdAt: string }[];
+  drafts: { id: string; category: string; subject?: string; body: string; status: string; createdAt: string; sentAt?: string }[];
+}
+
+type EmailStatus = 'UNCHECKED' | 'VALID' | 'INVALID' | 'NO_EMAIL' | 'CHECKING';
+
+export default function PartnerDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [partner, setPartner] = useState<Partner | null>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>('UNCHECKED');
+  const [emailStatusReason, setEmailStatusReason] = useState('');
+
+  // Outreach state
+  const [generating, setGenerating] = useState(false);
+  const [activeDraft, setActiveDraft] = useState<{ draftId: string; subject: string; body: string } | null>(null);
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedBody, setEditedBody] = useState('');
+  const [includeDeck, setIncludeDeck] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [sentMessage, setSentMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (id) fetchPartner();
+  }, [id]);
+
+  async function fetchPartner() {
+    const res = await fetch(`/api/partners/${id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setPartner(data);
+    }
+  }
+
+  async function checkEmail() {
+    setEmailStatus('CHECKING');
+    setEmailStatusReason('');
+    const res = await fetch(`/api/partners/${id}/validate-email`, { method: 'POST' });
+    const data = await res.json();
+    setEmailStatus(data.status || 'INVALID');
+    setEmailStatusReason(data.reason || '');
+  }
+
+  async function generateEmail() {
+    setGenerating(true);
+    setError('');
+    setActiveDraft(null);
+    setSentMessage('');
+    try {
+      const res = await fetch(`/api/partners/${id}/generate`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      setActiveDraft({ draftId: data.draftId, subject: data.subject, body: data.body });
+      setEditedSubject(data.subject);
+      setEditedBody(data.body);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function sendEmail() {
+    if (!activeDraft) return;
+    setSending(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/partners/${id}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftId: activeDraft.draftId, includeDeck }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+      setSentMessage(`✅ Email sent to ${partner?.contactEmail}`);
+      setActiveDraft(null);
+      fetchPartner();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function discardDraft() {
+    if (!activeDraft) return;
+    await fetch(`/api/drafts/${activeDraft.draftId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'REJECT' }),
+    });
+    setActiveDraft(null);
+    setError('');
+  }
+
+  if (!partner) return <p style={{ padding: '2rem' }}>Loading…</p>;
+
+  const emailBadge: Record<EmailStatus, { label: string; color: string }> = {
+    UNCHECKED: { label: '⚪ Not checked', color: '#888' },
+    CHECKING:  { label: '🔄 Checking…',   color: '#888' },
+    VALID:     { label: '✅ Valid',         color: '#1a6b1a' },
+    INVALID:   { label: '❌ Invalid',       color: '#c00' },
+    NO_EMAIL:  { label: '⚠️ No email',     color: '#b85c00' },
+  };
+
+  const canSend = emailStatus === 'VALID' && !!activeDraft && !sending;
+  const alreadySent = partner.drafts.some(d => d.category === 'OUTREACH' && d.status === 'SENT');
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <a href="/partners" style={{ fontSize: '0.9rem' }}>← Back to Partners</a>
-      <h1 style={{ marginTop: '1rem' }}>{partner.name}</h1>
-      <p>Region: <strong>{partner.region}</strong> | Status: <strong>{partner.status}</strong></p>
-      {partner.humanRequired && <p style={{ color: 'red' }}>⚠️ HUMAN REQUIRED</p>}
+    <main style={{ padding: '2rem', maxWidth: '780px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+      <a href="/partners" style={{ fontSize: '0.88rem', color: '#555', textDecoration: 'none' }}>← Back to Partners</a>
 
+      <h1 style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '1.5rem' }}>{partner.name}</h1>
+      <p style={{ color: '#555', margin: '0 0 0.5rem', fontSize: '0.9rem' }}>
+        Region: <strong>{partner.region}</strong> &nbsp;·&nbsp; Status: <strong>{partner.status}</strong>
+        {partner.lastContactAt && (
+          <span> &nbsp;·&nbsp; Last contact: {new Date(partner.lastContactAt).toLocaleDateString()}</span>
+        )}
+      </p>
+      {partner.humanRequired && (
+        <p style={{ color: 'red', fontWeight: 'bold', margin: '0.5rem 0' }}>⚠️ HUMAN REQUIRED — escalated</p>
+      )}
+
+      {/* Contact Card */}
       {(partner.contactName || partner.contactEmail) && (
-        <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#fff', border: '1px solid #eee', display: 'inline-block' }}>
-          <strong>Contact</strong><br />
-          {partner.contactName && <span>{partner.contactName}</span>}
-          {partner.contactTitle && <span style={{ color: '#666' }}> — {partner.contactTitle}</span>}
+        <div style={{ marginTop: '1rem', padding: '0.875rem 1rem', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: '6px', display: 'inline-block', minWidth: '300px' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#333', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact</div>
+          {partner.contactName && (
+            <div style={{ fontSize: '0.95rem' }}>
+              {partner.contactName}
+              {partner.contactTitle && <span style={{ color: '#666', fontSize: '0.88rem' }}> — {partner.contactTitle}</span>}
+            </div>
+          )}
           {partner.contactEmail && (
-            <><br /><a href={`mailto:${partner.contactEmail}`}>{partner.contactEmail}</a></>
+            <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <a href={`mailto:${partner.contactEmail}`} style={{ fontSize: '0.9rem', color: '#0066cc' }}>
+                {partner.contactEmail}
+              </a>
+              <button
+                onClick={checkEmail}
+                disabled={emailStatus === 'CHECKING'}
+                style={{ fontSize: '0.75rem', padding: '2px 8px', cursor: 'pointer', border: '1px solid #bbb', borderRadius: '4px', background: '#fff' }}
+              >
+                Check
+              </button>
+              <span style={{ fontSize: '0.8rem', color: emailBadge[emailStatus].color }}>
+                {emailBadge[emailStatus].label}
+              </span>
+            </div>
+          )}
+          {emailStatusReason && emailStatus === 'INVALID' && (
+            <div style={{ fontSize: '0.78rem', color: '#c00', marginTop: '4px' }}>{emailStatusReason}</div>
           )}
         </div>
       )}
 
-      <h2 style={{ marginTop: '2rem' }}>Messages</h2>
-      {partner.messages.length === 0 && <p>No messages yet.</p>}
-      {partner.messages.map(m => (
-        <div key={m.id} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#fff', border: '1px solid #eee' }}>
-          <strong>[{m.direction}]</strong> {m.body}
-          <span style={{ color: '#999', marginLeft: '1rem', fontSize: '0.8rem' }}>
-            {new Date(m.createdAt).toLocaleString()}
-          </span>
-        </div>
-      ))}
+      {/* ── OUTREACH SECTION ── */}
+      <div style={{ marginTop: '2rem', borderTop: '2px solid #e8e8e8', paddingTop: '1.5rem' }}>
+        <h2 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>📧 Outreach Email</h2>
 
-      <h2 style={{ marginTop: '2rem' }}>Drafts</h2>
-      {partner.drafts.length === 0 && <p>No drafts.</p>}
-      {partner.drafts.map(d => (
-        <div key={d.id} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: '#fff', border: '1px solid #eee' }}>
-          <strong>[{d.category}]</strong> {d.body} — <em>{d.status}</em>
-        </div>
-      ))}
+        {sentMessage && (
+          <div style={{ padding: '0.75rem 1rem', background: '#efffef', border: '1px solid #99d499', borderRadius: '6px', marginBottom: '1rem', color: '#1a6b1a', fontSize: '0.9rem' }}>
+            {sentMessage}
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: '0.75rem 1rem', background: '#fff0f0', border: '1px solid #f0aaaa', borderRadius: '6px', marginBottom: '1rem', color: '#c00', fontSize: '0.9rem' }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {alreadySent && !activeDraft && !sentMessage && (
+          <p style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+            ✅ An outreach email has already been sent to this contact.
+          </p>
+        )}
+
+        {!activeDraft && (
+          <>
+            <button
+              onClick={generateEmail}
+              disabled={generating || !partner.contactEmail}
+              style={{
+                padding: '0.6rem 1.4rem',
+                background: generating ? '#aaa' : '#1a56db',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.95rem',
+                cursor: generating || !partner.contactEmail ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {generating ? '⏳ Researching & Generating…' : alreadySent ? '🔁 Generate New Draft' : '✨ Generate Outreach Email'}
+            </button>
+            {!partner.contactEmail && (
+              <p style={{ color: '#b85c00', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                ⚠️ No contact email on record — cannot send outreach.
+              </p>
+            )}
+          </>
+        )}
+
+        {/* Draft Preview & Edit */}
+        {activeDraft && (
+          <div style={{ marginTop: '1.25rem', border: '1px solid #b8ccf0', borderRadius: '8px', background: '#f5f8ff', padding: '1.25rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#1a3c7a', fontSize: '0.95rem' }}>
+              📝 Review &amp; Edit Draft
+              <span style={{ fontWeight: 400, fontSize: '0.82rem', color: '#555', marginLeft: '0.5rem' }}>
+                — you must approve before anything is sent
+              </span>
+            </div>
+
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem', color: '#444' }}>Subject</label>
+            <input
+              value={editedSubject}
+              onChange={e => setEditedSubject(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.92rem', marginBottom: '0.875rem', boxSizing: 'border-box' }}
+            />
+
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem', color: '#444' }}>Email Body</label>
+            <textarea
+              value={editedBody}
+              onChange={e => setEditedBody(e.target.value)}
+              rows={15}
+              style={{ width: '100%', padding: '0.6rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.88rem', lineHeight: '1.6', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+
+            <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="checkbox" id="deck" checked={includeDeck} onChange={e => setIncludeDeck(e.target.checked)} />
+              <label htmlFor="deck" style={{ fontSize: '0.88rem', cursor: 'pointer', color: '#444' }}>
+                📎 Attach COARE Holdings deck (PDF)
+              </label>
+            </div>
+
+            {emailStatus !== 'VALID' && (
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#fff8ec', border: '1px solid #f0d080', borderRadius: '4px', fontSize: '0.83rem', color: '#7a4a00' }}>
+                ⚠️ Click "Check" above to validate the email address before sending.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+              <button
+                onClick={sendEmail}
+                disabled={!canSend}
+                style={{
+                  padding: '0.6rem 1.4rem',
+                  background: canSend ? '#1a6b1a' : '#aaa',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.95rem',
+                  cursor: canSend ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                }}
+              >
+                {sending ? '📤 Sending…' : '✅ Approve & Send'}
+              </button>
+              <button
+                onClick={discardDraft}
+                disabled={sending}
+                style={{ padding: '0.6rem 1.2rem', background: '#fff', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.92rem', cursor: 'pointer', color: '#555' }}
+              >
+                🗑️ Discard
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Message History */}
+      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem' }}>Message History</h2>
+      {partner.messages.length === 0 ? (
+        <p style={{ color: '#999', fontSize: '0.88rem' }}>No messages yet.</p>
+      ) : (
+        partner.messages.map(m => (
+          <div key={m.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: m.direction === 'OUTBOUND' ? '#f0f7ff' : '#f9f9f9', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.78rem', color: m.direction === 'OUTBOUND' ? '#1a56db' : '#666' }}>[{m.direction}]</span>{' '}
+            <span style={{ fontSize: '0.88rem' }}>{m.body.slice(0, 150)}{m.body.length > 150 ? '…' : ''}</span>
+            <span style={{ float: 'right', color: '#bbb', fontSize: '0.75rem' }}>{new Date(m.createdAt).toLocaleString()}</span>
+          </div>
+        ))
+      )}
+
+      {/* All Drafts */}
+      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem' }}>Draft History</h2>
+      {partner.drafts.length === 0 ? (
+        <p style={{ color: '#999', fontSize: '0.88rem' }}>No drafts.</p>
+      ) : (
+        partner.drafts.map(d => (
+          <div key={d.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: '4px', fontSize: '0.88rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.78rem', background: '#eee', padding: '1px 6px', borderRadius: '3px' }}>{d.category}</span>
+            {d.subject && <span style={{ marginLeft: '0.5rem', color: '#333' }}>{d.subject}</span>}
+            <span style={{ marginLeft: '0.75rem', color: d.status === 'SENT' ? '#1a6b1a' : d.status === 'PENDING' ? '#b85c00' : '#999', fontSize: '0.8rem' }}>
+              {d.status}{d.sentAt ? ` · ${new Date(d.sentAt).toLocaleDateString()}` : ''}
+            </span>
+          </div>
+        ))
+      )}
     </main>
   );
 }

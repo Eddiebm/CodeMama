@@ -8,19 +8,20 @@ datasource db {
 }
 
 model Partner {
-  id            String    @id @default(uuid())
-  name          String
-  region        String
-  interest      String
-  status        String    @default("NEW")
-  lastContactAt DateTime?
-  humanRequired Boolean   @default(false)
-  contactName   String?
-  contactEmail  String?
-  contactTitle  String?
-  messages      Message[]
-  drafts        Draft[]
-  createdAt     DateTime  @default(now())
+  id              String           @id @default(uuid())
+  name            String
+  region          String
+  interest        String
+  status          String           @default("NEW")
+  lastContactAt   DateTime?
+  humanRequired   Boolean          @default(false)
+  contactName     String?
+  contactEmail    String?
+  contactTitle    String?
+  messages        Message[]
+  drafts          Draft[]
+  emailValidation EmailValidation?
+  createdAt       DateTime         @default(now())
 }
 
 model Message {
@@ -37,9 +38,20 @@ model Draft {
   partnerId  String
   region     String
   category   String
+  subject    String?
   body       String
   status     String    @default("PENDING")
   createdAt  DateTime  @default(now())
   reviewedAt DateTime?
+  sentAt     DateTime?
   Partner    Partner   @relation(fields: [partnerId], references: [id])
+}
+
+model EmailValidation {
+  id        String   @id @default(uuid())
+  partnerId String   @unique
+  status    String   // VALID, INVALID, NO_EMAIL
+  reason    String?
+  checkedAt DateTime @default(now())
+  Partner   Partner  @relation(fields: [partnerId], references: [id])
 }
