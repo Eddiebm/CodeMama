@@ -1,5 +1,7 @@
 import { getAI } from './ai';
 import { LANGUAGE } from './language';
+import fs from 'fs';
+import path from 'path';
 
 type Region = keyof typeof LANGUAGE;
 const VALID_REGIONS: Region[] = ['US', 'EU', 'CN'];
@@ -7,6 +9,36 @@ const VALID_REGIONS: Region[] = ['US', 'EU', 'CN'];
 function safeRegion(r: string | undefined): Region {
   if (r && VALID_REGIONS.includes(r as Region)) return r as Region;
   return 'US';
+}
+
+export interface ProgramConfig {
+  company: string;
+  sender: string;
+  indication: string;
+  stage: string;
+  programType: string;
+  emailScope: string;
+  goalDescription: string;
+  forbiddenTopics: string;
+}
+
+export function loadProgramConfig(): ProgramConfig {
+  const configPath = path.join(process.cwd(), 'data', 'program.json');
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  } catch {
+    // Safe defaults if file is missing
+    return {
+      company: 'COARE Holdings',
+      sender: 'Eddie Bannerman-Menson',
+      indication: 'High-Grade Serous Ovarian Cancer (HGSOC)',
+      stage: 'Preclinical',
+      programType: 'Combination therapy',
+      emailScope: 'We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program.',
+      goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
+      forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy, clinical projections',
+    };
+  }
 }
 
 interface PartnerContext {
@@ -26,6 +58,7 @@ export async function generateOutreachEmail(
   partner: PartnerContext,
   researchContext: string
 ): Promise<EmailDraft> {
+  const cfg = loadProgramConfig();
   const region = safeRegion(partner.region);
   const introTemplate = LANGUAGE[region].INTRO;
 
@@ -41,26 +74,24 @@ export async function generateOutreachEmail(
     ? `\n\nCompany research context (use to personalize, do not copy verbatim):\n${researchContext}`
     : '';
 
-  const systemPrompt = `You are a business development writer for COARE Holdings, a life sciences company.
+  const systemPrompt = `You are a business development writer for ${cfg.company}, a life sciences company.
 
 YOUR TASK: Write a concise, professional introductory outreach email to a pharmaceutical/biotech partner.
 
-ABOUT COARE HOLDINGS:
-- Stage: Preclinical
-- Program: Ovarian cancer combination therapy
-- Goal: Identify potential licensing, co-development, or partnership discussions
-- Sender: Eddie Bannerman-Menson, COARE Holdings
+ABOUT ${cfg.company.toUpperCase()}:
+- Stage: ${cfg.stage}
+- Program: ${cfg.indication} — ${cfg.programType}
+- Goal: ${cfg.goalDescription}
+- Sender: ${cfg.sender}, ${cfg.company}
 
 APPROVED LANGUAGE ANCHOR (region: ${region}):
 "${introTemplate}"
 Your email must be consistent with this tone and content — this is your guardrail.
+Email scope guidance: ${cfg.emailScope}
 
 STRICT RULES — NEVER include:
-- Pricing, valuation, deal terms, royalties
-- Safety data, toxicity findings, adverse events
-- Efficacy comparisons to other drugs/programs
-- IND timelines, regulatory strategy, clinical projections
-- Any claims not supportable from a preclinical stage
+- ${cfg.forbiddenTopics}
+- Any claims not supportable from a ${cfg.stage.toLowerCase()} stage
 
 TONE BY REGION:
 - US: Direct, concise, collegial
@@ -75,8 +106,8 @@ FORMAT — return ONLY valid JSON, nothing else:
 
 The body should be 3–4 short paragraphs. End with:
 Best regards,
-Eddie Bannerman-Menson
-COARE Holdings`;
+${cfg.sender}
+${cfg.company}`;
 
   const userPrompt = `Write a personalized introductory outreach email for:
 
@@ -98,7 +129,6 @@ Opening: ${contactGreeting}`;
   const raw = message.content[0].type === 'text' ? message.content[0].text : '';
 
   // Parse JSON response — Claude sometimes uses real newlines inside JSON strings
-  // so we try multiple strategies
   const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
 
   // Strategy 1: direct JSON.parse
@@ -109,7 +139,7 @@ Opening: ${contactGreeting}`;
     }
   } catch { /* fall through */ }
 
-  // Strategy 2: extract subject + body via regex (handles multiline strings)
+  // Strategy 2: regex extraction (handles multiline strings)
   const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
   const bodyMatch = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
   if (subjectMatch && bodyMatch) {
@@ -119,9 +149,9 @@ Opening: ${contactGreeting}`;
     };
   }
 
-  // Strategy 3: if Claude returned plain text (no JSON), use it directly
+  // Strategy 3: plain text fallback
   return {
-    subject: `Introduction: COARE Holdings — ${partner.name}`,
+    subject: `Introduction: ${cfg.company} — ${partner.name}`,
     body: cleaned,
   };
 }

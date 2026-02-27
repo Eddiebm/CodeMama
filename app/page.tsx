@@ -5,6 +5,7 @@ export default function Home() {
       <nav style={{ marginTop: '1rem', display: 'flex', gap: '1.5rem' }}>
         <a href="/partners">Partners</a>
         <a href="/drafts">Pending Drafts</a>
+        <a href="/settings">⚙️ Program Settings</a>
       </nav>
     </main>
   );

@@ -11,8 +11,12 @@ node_modules
 prisma/dev.db
 prisma/dev.db-journal
 
-# Local data files (LSN imports etc.)
-data/
+# Local data files (LSN imports — keep private)
+data/*.xls
+data/*.xlsx
+data/*.csv
+# But DO track program config
+!data/program.json
 
 # OS files
 .DS_Store
