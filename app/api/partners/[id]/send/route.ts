@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendOutreachEmail } from '@/lib/mail';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }

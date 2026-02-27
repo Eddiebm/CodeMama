@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { summarize } from '@/lib/summarizer';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const partnerId = searchParams.get('partnerId');

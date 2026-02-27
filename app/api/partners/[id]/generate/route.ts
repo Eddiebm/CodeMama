@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { researchCompany } from '@/lib/researcher';
 import { generateOutreachEmail } from '@/lib/emailWriter';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: { id: string } }

@@ -4,6 +4,8 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const LSN_DIR = '/Users/eddiebannerman-menson/CodeMama/data/';
 
 function countryToRegion(country: string): string {

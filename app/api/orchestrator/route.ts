@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleInbound } from '@/lib/orchestrator';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { partnerId, text } = await req.json();
 

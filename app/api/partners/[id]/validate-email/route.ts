@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import dns from 'dns/promises';
 
+export const dynamic = 'force-dynamic';
+
 function isValidEmailSyntax(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

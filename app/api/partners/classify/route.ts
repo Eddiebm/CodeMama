@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // Keywords that signal an investor/VC rather than an operating pharma/biotech company
 const INVESTOR_TITLE_KEYWORDS = [
   'investor', 'investment', 'venture', 'capital', 'fund', 'partner', 'principal',

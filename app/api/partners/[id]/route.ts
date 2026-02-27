@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const partner = await db.partner.findUnique({
     where: { id: params.id },

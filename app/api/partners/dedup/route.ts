@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
   try {
     // Fetch all partners ordered by createdAt ascending (keep the oldest/first)
