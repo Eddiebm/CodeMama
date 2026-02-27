@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Nav from '@/app/components/Nav';
 
 interface NewsItem {
   title: string;
@@ -296,9 +297,9 @@ export default function NewsPage() {
   });
 
   return (
+    <>
+    <Nav />
     <main style={{ padding: '2rem', maxWidth: '820px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      <a href="/" style={{ fontSize: '0.88rem', color: '#555', textDecoration: 'none' }}>← Back</a>
-
       <h1 style={{ marginTop: '0.75rem', marginBottom: '0.15rem', fontSize: '1.4rem' }}>📰 Intelligence Feed</h1>
       <p style={{ color: '#666', fontSize: '0.88rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
         Stay current on your partner companies, track solid tumor oncology deals, and spot new partnership opportunities.
@@ -385,5 +386,6 @@ export default function NewsPage() {
         </div>
       )}
     </main>
+    </>
   );
 }

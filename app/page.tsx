@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Nav from '@/app/components/Nav';
 
 interface DailyPartner {
   id: string;
@@ -129,20 +130,7 @@ export default function Home() {
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f7f8fc' }}>
 
-      {/* ── Top nav bar ── */}
-      <div style={{ background: '#1a1a2e', color: '#fff', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.02em' }}>🧬 GPCE</span>
-          <span style={{ color: '#aaa', marginLeft: '0.5rem', fontSize: '0.88rem' }}>Global Partner Continuity Engine</span>
-        </div>
-        <nav style={{ display: 'flex', gap: '1.5rem', fontSize: '0.88rem' }}>
-          <Link href="/partners" style={{ color: '#ccd', textDecoration: 'none' }}>👥 Partners</Link>
-          <Link href="/pipeline" style={{ color: '#ccd', textDecoration: 'none' }}>🔄 Pipeline</Link>
-          <Link href="/news"     style={{ color: '#ccd', textDecoration: 'none' }}>📰 Intelligence</Link>
-          <Link href="/drafts"   style={{ color: '#ccd', textDecoration: 'none' }}>📬 Drafts</Link>
-          <Link href="/settings" style={{ color: '#ccd', textDecoration: 'none' }}>⚙️ Settings</Link>
-        </nav>
-      </div>
+      <Nav />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Nav from '@/app/components/Nav';
 
 type PipelineStage = 'NOT_STARTED' | 'AWAITING' | 'FOLLOW_UP_DUE' | 'RESPONDED' | 'DONE' | 'OPT_OUT';
 
@@ -213,21 +214,9 @@ export default function PipelinePage() {
   const actionable = data ? (data.counts.FOLLOW_UP_DUE ?? 0) + (data.counts.RESPONDED ?? 0) : 0;
 
   return (
+    <>
+    <Nav />
     <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f7f8fc' }}>
-      {/* Nav */}
-      <div style={{ background: '#1a1a2e', color: '#fff', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <Link href="/" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.88rem' }}>🧬 GPCE</Link>
-        </div>
-        <nav style={{ display: 'flex', gap: '1.5rem', fontSize: '0.88rem' }}>
-          <Link href="/partners"  style={{ color: '#ccd', textDecoration: 'none' }}>👥 Partners</Link>
-          <Link href="/pipeline"  style={{ color: '#fff', textDecoration: 'none', fontWeight: 700 }}>🔄 Pipeline</Link>
-          <Link href="/news"      style={{ color: '#ccd', textDecoration: 'none' }}>📰 Intelligence</Link>
-          <Link href="/drafts"    style={{ color: '#ccd', textDecoration: 'none' }}>📬 Drafts</Link>
-          <Link href="/settings"  style={{ color: '#ccd', textDecoration: 'none' }}>⚙️ Settings</Link>
-        </nav>
-      </div>
-
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -315,5 +304,6 @@ export default function PipelinePage() {
         )}
       </div>
     </main>
+    </>
   );
 }

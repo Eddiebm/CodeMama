@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Nav from '@/app/components/Nav';
 
 interface Config {
   company: string;
@@ -110,12 +111,17 @@ export default function SettingsPage() {
     }
   }
 
-  if (!config) return <p style={{ padding: '2rem' }}>Loading…</p>;
+  if (!config) return (
+    <>
+      <Nav />
+      <p style={{ padding: '2rem' }}>Loading…</p>
+    </>
+  );
 
   return (
+    <>
+    <Nav />
     <main style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      <a href="/" style={{ fontSize: '0.88rem', color: '#555', textDecoration: 'none' }}>← Back</a>
-
       <h1 style={{ marginTop: '0.75rem', marginBottom: '0.2rem', fontSize: '1.4rem' }}>⚙️ Program Settings</h1>
       <p style={{ color: '#666', fontSize: '0.88rem', marginBottom: '2rem', lineHeight: '1.5' }}>
         Everything the AI reads before writing an outreach email. Update the indication, add new clinical data, or sharpen the pitch — the next email you generate reflects it immediately.
@@ -183,5 +189,6 @@ export default function SettingsPage() {
         )}
       </div>
     </main>
+    </>
   );
 }
