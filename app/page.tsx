@@ -158,8 +158,8 @@ export default function Home() {
             {[
               { label: 'Total Partners', value: daily.totalPartners, color: '#1a1a2e' },
               { label: 'Ready to Contact', value: daily.totalEligible, color: '#1a56db' },
-              { label: 'Emails Verified', value: daily.stats.email.verified, color: '#1a6b1a' },
-              { label: 'Investors', value: daily.stats.byType.INVESTOR || 0, color: '#7c3aed' },
+              { label: 'Emails Verified', value: daily.stats?.email?.verified ?? 0, color: '#1a6b1a' },
+              { label: 'Investors', value: daily.stats?.byType?.INVESTOR ?? 0, color: '#7c3aed' },
             ].map(s => (
               <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '1rem 1.25rem' }}>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: s.color }}>{s.value}</div>
