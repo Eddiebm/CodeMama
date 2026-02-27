@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Partner {
+  id            String    @id @default(uuid())
+  name          String
+  region        String
+  interest      String
+  status        String    @default("NEW")
+  lastContactAt DateTime?
+  humanRequired Boolean   @default(false)
+  messages      Message[]
+  drafts        Draft[]
+  createdAt     DateTime  @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  partnerId String
+  direction String
+  body      String
+  createdAt DateTime @default(now())
+  Partner   Partner  @relation(fields: [partnerId], references: [id])
+}
+
+model Draft {
+  id         String    @id @default(uuid())
+  partnerId  String
+  region     String
+  category   String
+  body       String
+  status     String    @default("PENDING")
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+  Partner    Partner   @relation(fields: [partnerId], references: [id])
+}
