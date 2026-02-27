@@ -18,6 +18,7 @@ model Partner {
   contactName     String?
   contactEmail    String?
   contactTitle    String?
+  partnerType     String           @default("PHARMA")  // PHARMA | BIOTECH | INVESTOR | OTHER
   messages        Message[]
   drafts          Draft[]
   emailValidation EmailValidation?

@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
+type PartnerType = 'PHARMA' | 'BIOTECH' | 'INVESTOR' | 'OTHER';
+
 interface Partner {
   id: string;
   name: string;
   region: string;
   status: string;
   interest: string;
+  partnerType: PartnerType;
   humanRequired: boolean;
   contactName?: string;
   contactEmail?: string;
@@ -17,6 +20,13 @@ interface Partner {
   messages: { id: string; direction: string; body: string; createdAt: string }[];
   drafts: { id: string; category: string; subject?: string; body: string; status: string; createdAt: string; sentAt?: string }[];
 }
+
+const TYPE_META: Record<PartnerType, { label: string; color: string; bg: string; description: string }> = {
+  PHARMA:   { label: 'Pharma',    color: '#1a56db', bg: '#eef3ff', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
+  BIOTECH:  { label: 'Biotech',   color: '#0e7c6b', bg: '#edfaf7', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
+  INVESTOR: { label: 'Investor',  color: '#7c3aed', bg: '#f5f0ff', description: 'VC/investor-focused email — market opportunity, milestones & capital efficiency' },
+  OTHER:    { label: 'Other',     color: '#555',    bg: '#f4f4f4', description: 'Standard outreach email' },
+};
 
 type EmailStatus = 'UNCHECKED' | 'VALID' | 'INVALID' | 'NO_EMAIL' | 'CHECKING';
 
@@ -35,6 +45,7 @@ export default function PartnerDetail() {
   const [sending, setSending] = useState(false);
   const [sentMessage, setSentMessage] = useState('');
   const [error, setError] = useState('');
+  const [typeChanging, setTypeChanging] = useState(false);
 
   useEffect(() => {
     if (id) fetchPartner();
@@ -46,6 +57,17 @@ export default function PartnerDetail() {
       const data = await res.json();
       setPartner(data);
     }
+  }
+
+  async function changeType(newType: PartnerType) {
+    setTypeChanging(true);
+    await fetch(`/api/partners/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partnerType: newType }),
+    });
+    await fetchPartner();
+    setTypeChanging(false);
   }
 
   async function checkEmail() {
@@ -111,6 +133,9 @@ export default function PartnerDetail() {
 
   if (!partner) return <p style={{ padding: '2rem' }}>Loading…</p>;
 
+  const pType = (partner.partnerType || 'PHARMA') as PartnerType;
+  const typeMeta = TYPE_META[pType];
+
   const emailBadge: Record<EmailStatus, { label: string; color: string }> = {
     UNCHECKED: { label: '⚪ Not checked', color: '#888' },
     CHECKING:  { label: '🔄 Checking…',   color: '#888' },
@@ -133,6 +158,34 @@ export default function PartnerDetail() {
           <span> &nbsp;·&nbsp; Last contact: {new Date(partner.lastContactAt).toLocaleDateString()}</span>
         )}
       </p>
+      {/* Partner Type Badge + Selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.6rem 0 0.25rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.78rem', color: '#666' }}>Type:</span>
+        {(['PHARMA', 'BIOTECH', 'INVESTOR', 'OTHER'] as PartnerType[]).map(t => (
+          <button
+            key={t}
+            onClick={() => changeType(t)}
+            disabled={typeChanging}
+            style={{
+              padding: '3px 10px',
+              fontSize: '0.78rem',
+              fontWeight: pType === t ? 700 : 400,
+              border: `1px solid ${pType === t ? TYPE_META[t].color : '#ccc'}`,
+              borderRadius: '12px',
+              background: pType === t ? TYPE_META[t].bg : '#fff',
+              color: pType === t ? TYPE_META[t].color : '#777',
+              cursor: typeChanging ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {TYPE_META[t].label}
+          </button>
+        ))}
+        <span style={{ fontSize: '0.76rem', color: '#888', marginLeft: '0.25rem' }}>
+          — {typeMeta.description}
+        </span>
+      </div>
+
       {partner.humanRequired && (
         <p style={{ color: 'red', fontWeight: 'bold', margin: '0.5rem 0' }}>⚠️ HUMAN REQUIRED — escalated</p>
       )}

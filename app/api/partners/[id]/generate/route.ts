@@ -22,6 +22,7 @@ export async function POST(
         name: partner.name,
         region: partner.region,
         interest: partner.interest,
+        partnerType: partner.partnerType || 'PHARMA',
         contactName: partner.contactName,
         contactTitle: partner.contactTitle,
       },

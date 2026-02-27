@@ -24,6 +24,9 @@ export interface ProgramConfig {
   clinicalContext: string;
   marketContext: string;
   partnerHook: string;
+  investorPitch: string;
+  investorMarketHook: string;
+  investorMilestones: string;
 }
 
 export function loadProgramConfig(): ProgramConfig {
@@ -42,8 +45,11 @@ export function loadProgramConfig(): ProgramConfig {
       goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
       forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy',
       clinicalContext: 'Approximately 80% of women with HGSOC will relapse following first-line therapy. Median survival after platinum-resistant relapse remains under 12 months.',
-      marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year and over 207,000 deaths. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
-      partnerHook: 'Where the partner has an oncology program, reference strategic alignment. Where less obvious, frame HGSOC as an adjacency to their existing oncology franchise.',
+      marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
+      partnerHook: 'Where the partner has an oncology program, reference strategic alignment.',
+      investorPitch: 'COARE represents a capital-efficient preclinical opportunity in a high-value indication with validated biology and clear commercial precedents.',
+      investorMarketHook: 'With the global ovarian cancer market projected to exceed $3B by 2030, acquirers are actively seeking differentiated preclinical programs.',
+      investorMilestones: 'Key near-term value inflection points include IND-enabling studies and first-in-human readouts.',
     };
   }
 }
@@ -52,6 +58,7 @@ interface PartnerContext {
   name: string;
   region: string;
   interest: string;
+  partnerType: string;
   contactName?: string | null;
   contactTitle?: string | null;
 }
@@ -59,6 +66,94 @@ interface PartnerContext {
 interface EmailDraft {
   subject: string;
   body: string;
+}
+
+function buildPharmaPrompt(cfg: ProgramConfig, region: Region, partner: PartnerContext, introTemplate: string): string {
+  return `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
+
+You are writing a direct, senior-level business development email to a pharma or biotech partner. Your voice is authoritative, commercially fluent, and concise — a seasoned EVP BD writing peer-to-peer, not a sales rep. You demonstrate sector knowledge and make the reader feel you understand their pipeline and therapeutic strategy.
+
+ABOUT THE PROGRAM:
+- Company: ${cfg.company}
+- Indication: ${cfg.indication}
+- Type: ${cfg.programType}
+- Stage: ${cfg.stage}
+- BD objective: ${cfg.goalDescription}
+
+CLINICAL CONTEXT (weave in 1–2 facts naturally — do not list them all):
+${cfg.clinicalContext}
+
+MARKET CONTEXT (use to frame commercial opportunity):
+${cfg.marketContext}
+
+PARTNER PERSONALISATION:
+${cfg.partnerHook}
+
+APPROVED LANGUAGE ANCHOR (region: ${region}):
+"${introTemplate}"
+
+GUARDRAILS — never include: ${cfg.forbiddenTopics}
+Never make claims unsupportable at ${cfg.stage.toLowerCase()} stage.
+
+STYLE:
+- 3–4 tight paragraphs, no bullet points
+- Open with clinical urgency or unmet need — not "I hope this finds you well"
+- Reference the partner's therapeutic focus to show you've done your homework
+- Close with a specific low-friction ask (a 20-minute call, not "let me know if interested")
+- Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
+
+SIGN-OFF (exact):
+Best regards,
+${cfg.sender}
+${cfg.senderTitle}
+${cfg.company}
+
+FORMAT — return ONLY valid JSON: {"subject": "...", "body": "..."}`;
+}
+
+function buildInvestorPrompt(cfg: ProgramConfig, region: Region, partner: PartnerContext, introTemplate: string): string {
+  return `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
+
+You are writing to a venture capital or investment firm. Your audience thinks in terms of market opportunity, capital efficiency, risk-adjusted returns, and exit potential — not therapeutic alignment. Speak their language: portfolio fit, addressable market, milestones to value, and the strategic M&A backdrop.
+
+ABOUT THE OPPORTUNITY:
+- Company: ${cfg.company}
+- Asset: ${cfg.indication} — ${cfg.programType}
+- Stage: ${cfg.stage}
+
+INVESTMENT THESIS (use selectively, in your own words):
+${cfg.investorPitch}
+
+MARKET & EXIT CONTEXT (weave in 1–2 points naturally):
+${cfg.investorMarketHook}
+
+KEY MILESTONES (can reference to frame near-term catalysts):
+${cfg.investorMilestones}
+
+MARKET SIZE ANCHOR:
+${cfg.marketContext}
+
+APPROVED LANGUAGE ANCHOR (region: ${region}):
+"${introTemplate}"
+
+GUARDRAILS — never include: ${cfg.forbiddenTopics}
+Never make unsubstantiated claims about returns, valuations, or exit multiples.
+
+STYLE:
+- 3–4 tight paragraphs, no bullet points
+- Open by framing the commercial problem or market backdrop — not with a product pitch
+- Reference what you know about the fund's therapeutic or stage focus to show fit
+- Speak to capital efficiency: what can be achieved with the next tranche, what de-risks the asset
+- Close with a specific, low-friction ask (a 20-minute call)
+- Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
+
+SIGN-OFF (exact):
+Best regards,
+${cfg.sender}
+${cfg.senderTitle}
+${cfg.company}
+
+FORMAT — return ONLY valid JSON: {"subject": "...", "body": "..."}`;
 }
 
 export async function generateOutreachEmail(
@@ -69,6 +164,8 @@ export async function generateOutreachEmail(
   const region = safeRegion(partner.region);
   const introTemplate = LANGUAGE[region].INTRO;
 
+  const isInvestor = partner.partnerType === 'INVESTOR';
+
   const contactGreeting = partner.contactName
     ? `Dear ${partner.contactName.split(' ')[0]},`
     : 'Dear Sir/Madam,';
@@ -78,56 +175,19 @@ export async function generateOutreachEmail(
     : '';
 
   const researchNote = researchContext
-    ? `\nPartner research (use selectively to personalise — do not reproduce verbatim):\n${researchContext}`
+    ? `\nPartner research (use selectively — do not reproduce verbatim):\n${researchContext}`
     : '';
 
-  const systemPrompt = `You are ${cfg.sender}, ${cfg.senderTitle} at ${cfg.company}.
+  const systemPrompt = isInvestor
+    ? buildInvestorPrompt(cfg, region, partner, introTemplate)
+    : buildPharmaPrompt(cfg, region, partner, introTemplate);
 
-You are writing a direct, senior-level business development email to a potential pharmaceutical or biotech partner. Your voice is authoritative, commercially fluent, and concise — the way a seasoned EVP BD writes, not a junior sales rep. You get to the point, demonstrate sector knowledge, and make the reader feel you understand their world.
-
-ABOUT THE PROGRAM:
-- Company: ${cfg.company}
-- Indication: ${cfg.indication}
-- Type: ${cfg.programType}
-- Stage: ${cfg.stage}
-- BD objective: ${cfg.goalDescription}
-
-CLINICAL CONTEXT (weave in 1–2 of these facts naturally — do not list them all):
-${cfg.clinicalContext}
-
-MARKET CONTEXT (use selectively to frame commercial opportunity):
-${cfg.marketContext}
-
-PARTNER PERSONALISATION GUIDANCE:
-${cfg.partnerHook}
-
-APPROVED LANGUAGE ANCHOR — your email must stay consistent with this register (region: ${region}):
-"${introTemplate}"
-
-GUARDRAILS — never include:
-${cfg.forbiddenTopics}
-Never make claims that cannot be supported at ${cfg.stage.toLowerCase()} stage.
-
-STYLE RULES:
-- 3–4 tight paragraphs, no bullet points in the email body
-- Open with a clinical or market insight that creates urgency, not a generic "I hope you are well"
-- Reference what you know about the partner's therapeutic focus to show relevance
-- Close with a specific, low-friction ask (a 20-minute call, not "let me know if interested")
-- Region tone — US: direct and collegial; EU: measured and formal; CN: respectful and relationship-first
-
-SIGN-OFF (use exactly):
-Best regards,
-${cfg.sender}
-${cfg.senderTitle}
-${cfg.company}
-
-FORMAT — return ONLY valid JSON, nothing else:
-{"subject": "...", "body": "..."}`;
+  const audienceTag = isInvestor ? 'venture capital / investment firm' : `${partner.partnerType.toLowerCase()} company`;
 
   const userPrompt = `Write the outreach email for:
 
-Company: ${partner.name}
-Therapeutic focus: ${partner.interest || 'oncology/life sciences'}
+Recipient organisation: ${partner.name} (${audienceTag})
+Therapeutic / investment focus: ${partner.interest || 'oncology/life sciences'}
 Region: ${region}
 ${seniorityNote}
 ${researchNote}
@@ -144,15 +204,11 @@ Open with: ${contactGreeting}`;
   const raw = message.content[0].type === 'text' ? message.content[0].text : '';
   const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
 
-  // Strategy 1: direct JSON.parse
   try {
     const parsed = JSON.parse(cleaned);
-    if (parsed.subject && parsed.body) {
-      return { subject: parsed.subject, body: parsed.body };
-    }
+    if (parsed.subject && parsed.body) return { subject: parsed.subject, body: parsed.body };
   } catch { /* fall through */ }
 
-  // Strategy 2: regex extraction (handles real newlines inside JSON strings)
   const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
   const bodyMatch = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
   if (subjectMatch && bodyMatch) {
@@ -162,9 +218,8 @@ Open with: ${contactGreeting}`;
     };
   }
 
-  // Strategy 3: plain text fallback
   return {
-    subject: `${cfg.indication} BD Opportunity — ${cfg.company}`,
+    subject: `${cfg.indication} — ${isInvestor ? 'Investment Opportunity' : 'BD Opportunity'} | ${cfg.company}`,
     body: cleaned,
   };
 }

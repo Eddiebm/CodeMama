@@ -15,9 +15,12 @@ interface Config {
   clinicalContext: string;
   marketContext: string;
   partnerHook: string;
+  investorPitch: string;
+  investorMarketHook: string;
+  investorMilestones: string;
 }
 
-type SectionKey = 'identity' | 'program' | 'intelligence' | 'guardrails';
+type SectionKey = 'identity' | 'program' | 'intelligence' | 'investor' | 'guardrails';
 
 const SECTIONS: { key: SectionKey; title: string; subtitle: string; fields: { key: keyof Config; label: string; hint: string; multiline?: boolean; rows?: number }[] }[] = [
   {
@@ -50,6 +53,16 @@ const SECTIONS: { key: SectionKey; title: string; subtitle: string; fields: { ke
       { key: 'clinicalContext', label: 'Clinical Context', hint: 'Disease burden, unmet need, relapse rates, survival data. The AI picks 1–2 facts per email — not all of them.', multiline: true, rows: 4 },
       { key: 'marketContext',   label: 'Market Context',   hint: 'Patient numbers, market size, regional data, competitive landscape. Used to frame commercial opportunity.', multiline: true, rows: 4 },
       { key: 'partnerHook',     label: 'Partner Relevance Guidance', hint: 'How should the AI connect COARE\'s program to partners with different therapeutic focuses?', multiline: true, rows: 3 },
+    ],
+  },
+  {
+    key: 'investor',
+    title: '💼 Investor Pitch',
+    subtitle: 'Used when emailing VCs and investment firms — different tone, different hooks',
+    fields: [
+      { key: 'investorPitch',       label: 'Investment Thesis',     hint: 'Why is this a compelling investment? Capital efficiency, differentiated mechanism, validated biology.', multiline: true, rows: 4 },
+      { key: 'investorMarketHook',  label: 'Market & Exit Context', hint: 'M&A backdrop, patent cliffs, strategic acquirer appetite, market growth. 1–2 points per email.', multiline: true, rows: 3 },
+      { key: 'investorMilestones',  label: 'Value Inflection Points', hint: 'Near-term catalysts that de-risk the asset and create value: IND, POC readout, first-in-human, etc.', multiline: true, rows: 3 },
     ],
   },
   {
