@@ -1,7 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+
+interface NewsItem {
+  title: string;
+  link: string;
+  pubDate: string;
+  source: string;
+  snippet: string;
+}
+
+function timeAgo(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60)  return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)   return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 type PartnerType = 'PHARMA' | 'BIOTECH' | 'INVESTOR' | 'OTHER';
 
@@ -46,6 +63,12 @@ export default function PartnerDetail() {
   const [sentMessage, setSentMessage] = useState('');
   const [error, setError] = useState('');
   const [typeChanging, setTypeChanging] = useState(false);
+
+  // News state
+  const [newsItems, setNewsItems]   = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsLoaded, setNewsLoaded] = useState(false);
+  const [newsError, setNewsError]   = useState('');
 
   useEffect(() => {
     if (id) fetchPartner();
@@ -117,6 +140,23 @@ export default function PartnerDetail() {
       setError(e.message);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function loadNews() {
+    if (!partner) return;
+    setNewsLoading(true);
+    setNewsError('');
+    try {
+      const res = await fetch(`/api/news?type=company&name=${encodeURIComponent(partner.name)}&max=6`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setNewsItems(data.items || []);
+      setNewsLoaded(true);
+    } catch (e: any) {
+      setNewsError(e.message);
+    } finally {
+      setNewsLoading(false);
     }
   }
 
@@ -367,6 +407,78 @@ export default function PartnerDetail() {
           </div>
         ))
       )}
+
+      {/* ── NEWS SECTION ── */}
+      <div style={{ marginTop: '2.5rem', borderTop: '2px solid #e8e8e8', paddingTop: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.05rem' }}>📰 Latest News</h2>
+          <button
+            onClick={loadNews}
+            disabled={newsLoading}
+            style={{
+              padding: '0.35rem 0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '5px',
+              background: '#fff',
+              fontSize: '0.82rem',
+              cursor: newsLoading ? 'not-allowed' : 'pointer',
+              color: '#444',
+            }}
+          >
+            {newsLoading ? '⏳ Loading…' : newsLoaded ? '↻ Refresh' : '🔍 Load News'}
+          </button>
+        </div>
+
+        {!newsLoaded && !newsLoading && (
+          <p style={{ color: '#aaa', fontSize: '0.85rem' }}>
+            Click "Load News" to pull recent articles about {partner.name} — useful for pre-call research.
+          </p>
+        )}
+
+        {newsError && (
+          <p style={{ color: '#c00', fontSize: '0.85rem' }}>⚠️ {newsError}</p>
+        )}
+
+        {newsLoaded && newsItems.length === 0 && !newsLoading && (
+          <p style={{ color: '#888', fontSize: '0.85rem' }}>No recent news found for {partner.name}.</p>
+        )}
+
+        {newsItems.length > 0 && (
+          <div style={{ border: '1px solid #e8e8e8', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
+            {newsItems.map((item, i) => (
+              <a
+                key={i}
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  padding: '0.85rem 1rem',
+                  borderBottom: i < newsItems.length - 1 ? '1px solid #f0f0f0' : 'none',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f9f9fc')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1a1a2e', lineHeight: '1.4', marginBottom: '0.2rem' }}>
+                  {item.title}
+                </div>
+                {item.snippet && (
+                  <div style={{ fontSize: '0.78rem', color: '#555', lineHeight: '1.45', marginBottom: '0.3rem' }}>
+                    {item.snippet}
+                  </div>
+                )}
+                <div style={{ fontSize: '0.72rem', color: '#aaa', display: 'flex', gap: '0.6rem' }}>
+                  <span>{item.source}</span>
+                  <span>·</span>
+                  <span>{timeAgo(item.pubDate)}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
