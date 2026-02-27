@@ -1,4 +1,4 @@
-import { ai } from './ai';
+import { getAI } from './ai';
 import { LANGUAGE } from './language';
 
 type Region = keyof typeof LANGUAGE;
@@ -88,8 +88,8 @@ ${researchNote}
 
 Opening: ${contactGreeting}`;
 
-  const message = await ai.messages.create({
-    model: 'claude-3-5-haiku-20241022',
+  const message = await getAI().messages.create({
+    model: 'claude-3-haiku-20240307',
     max_tokens: 1024,
     messages: [{ role: 'user', content: userPrompt }],
     system: systemPrompt,
@@ -97,20 +97,31 @@ Opening: ${contactGreeting}`;
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '';
 
-  // Parse JSON response
+  // Parse JSON response — Claude sometimes uses real newlines inside JSON strings
+  // so we try multiple strategies
+  const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+
+  // Strategy 1: direct JSON.parse
   try {
-    // Strip any markdown code fences if present
-    const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
+    if (parsed.subject && parsed.body) {
+      return { subject: parsed.subject, body: parsed.body };
+    }
+  } catch { /* fall through */ }
+
+  // Strategy 2: extract subject + body via regex (handles multiline strings)
+  const subjectMatch = cleaned.match(/"subject"\s*:\s*"([^"]+)"/);
+  const bodyMatch = cleaned.match(/"body"\s*:\s*"([\s\S]+?)"\s*\}/);
+  if (subjectMatch && bodyMatch) {
     return {
-      subject: parsed.subject || `Introduction: COARE Holdings — ${partner.name}`,
-      body: parsed.body || raw,
-    };
-  } catch {
-    // Fallback: use raw as body
-    return {
-      subject: `Introduction: COARE Holdings — ${partner.name}`,
-      body: raw,
+      subject: subjectMatch[1],
+      body: bodyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
     };
   }
+
+  // Strategy 3: if Claude returned plain text (no JSON), use it directly
+  return {
+    subject: `Introduction: COARE Holdings — ${partner.name}`,
+    body: cleaned,
+  };
 }
