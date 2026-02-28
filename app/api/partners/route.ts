@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
-  const partners = await db.partner.findMany({ orderBy: { createdAt: 'desc' } });
-  return NextResponse.json(partners);
+  const partners = await db.partner.findMany({
+    orderBy: { createdAt: 'desc' },
+    // Only fetch list-view fields — skip heavy text columns (notes, emailDraft, etc.)
+    select: {
+      id: true,
+      name: true,
+      region: true,
+      status: true,
+      partnerType: true,
+      interest: true,
+      contactName: true,
+      contactTitle: true,
+      contactEmail: true,
+      employmentStatus: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json(partners, {
+    headers: {
+      // Browser serves cached list instantly; revalidates in background every 15s
+      'Cache-Control': 'private, max-age=15, stale-while-revalidate=60',
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
