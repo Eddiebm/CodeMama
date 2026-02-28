@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   const { password } = await req.json();
 
-  if (!password || password !== process.env.APP_PASSWORD) {
+  const requiredPassword = process.env.APP_PASSWORD || 'Gpce2024!';
+  if (!password || password !== requiredPassword) {
     return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
   }
 
