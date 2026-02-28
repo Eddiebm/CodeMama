@@ -25,7 +25,7 @@ export default function Nav() {
 
   return (
     <div style={{
-      background: '#1a1a2e',
+      background: '#000',
       color: '#fff',
       padding: '0 2rem',
       display: 'flex',
@@ -35,7 +35,7 @@ export default function Nav() {
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      borderBottom: '1px solid #2a2a4a',
+      borderBottom: '1px solid #222',
     }}>
       {/* Logo */}
       <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -52,13 +52,13 @@ export default function Nav() {
               key={href}
               href={href}
               style={{
-                color: active ? '#fff' : '#8899bb',
+                color: active ? '#fff' : '#888',
                 textDecoration: 'none',
                 fontSize: '0.85rem',
                 fontWeight: active ? 600 : 400,
                 padding: '0.3rem 0.75rem',
                 borderRadius: '6px',
-                background: active ? '#2a2a4a' : 'transparent',
+                background: active ? '#333' : 'transparent',
                 transition: 'all 0.15s',
               }}
             >
@@ -73,8 +73,8 @@ export default function Nav() {
         onClick={handleLogout}
         style={{
           background: 'transparent',
-          border: '1px solid #2a2a4a',
-          color: '#667',
+          border: '1px solid #333',
+          color: '#888',
           fontSize: '0.78rem',
           padding: '0.25rem 0.7rem',
           borderRadius: '6px',

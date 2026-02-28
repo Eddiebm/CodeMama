@@ -36,32 +36,31 @@ export default function Login() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0f0f1a',
+      background: '#f5f5f5',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: 'system-ui, sans-serif',
     }}>
       <div style={{
-        background: '#1a1a2e',
-        border: '1px solid #2a2a4a',
-        borderRadius: '16px',
+        background: '#fff',
+        border: '1px solid #e0e0e0',
+        borderRadius: '12px',
         padding: '2.5rem',
         width: '100%',
-        maxWidth: '380px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        maxWidth: '360px',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
       }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🧬</div>
-          <div style={{ fontWeight: 700, fontSize: '1.3rem', color: '#fff', letterSpacing: '0.05em' }}>GPCE</div>
-          <div style={{ color: '#888', fontSize: '0.82rem', marginTop: '0.25rem' }}>Global Partner Continuity Engine</div>
-          <div style={{ color: '#555', fontSize: '0.75rem', marginTop: '0.15rem' }}>COARE Holdings · Internal Tool</div>
+          <div style={{ fontWeight: 700, fontSize: '1.3rem', color: '#000', letterSpacing: '0.05em' }}>GPCE</div>
+          <div style={{ color: '#666', fontSize: '0.82rem', marginTop: '0.25rem' }}>Global Partner Continuity Engine</div>
+          <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.15rem' }}>COARE Holdings · Internal Tool</div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', color: '#aaa', fontSize: '0.82rem', marginBottom: '0.4rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', color: '#555', fontSize: '0.78rem', marginBottom: '0.4rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
               Password
             </label>
             <input
@@ -72,28 +71,19 @@ export default function Login() {
               required
               placeholder="Enter access password"
               style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                background: '#0f0f1a',
-                border: '1px solid #2a2a4a',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '0.95rem',
-                outline: 'none',
-                boxSizing: 'border-box',
+                width: '100%', padding: '0.75rem 1rem',
+                background: '#fafafa', border: '1px solid #e0e0e0',
+                borderRadius: '8px', color: '#000', fontSize: '0.95rem',
+                outline: 'none', boxSizing: 'border-box',
               }}
             />
           </div>
 
           {error && (
             <div style={{
-              background: '#2a1a1a',
-              border: '1px solid #5a2a2a',
-              borderRadius: '6px',
-              padding: '0.6rem 0.8rem',
-              color: '#ff6b6b',
-              fontSize: '0.83rem',
-              marginBottom: '1rem',
+              background: '#fff5f5', border: '1px solid #eecece',
+              borderRadius: '6px', padding: '0.6rem 0.8rem',
+              color: '#c00', fontSize: '0.83rem', marginBottom: '1rem',
             }}>
               {error}
             </div>
@@ -103,19 +93,14 @@ export default function Login() {
             type="submit"
             disabled={loading || !password}
             style={{
-              width: '100%',
-              padding: '0.8rem',
-              background: loading ? '#2a2a5a' : '#3b5bdb',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s',
+              width: '100%', padding: '0.8rem',
+              background: loading || !password ? '#ccc' : '#000',
+              color: '#fff', border: 'none', borderRadius: '8px',
+              fontSize: '0.95rem', fontWeight: 600,
+              cursor: loading || !password ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Signing in...' : 'Sign In →'}
+            {loading ? 'Signing in…' : 'Sign In →'}
           </button>
         </form>
       </div>
