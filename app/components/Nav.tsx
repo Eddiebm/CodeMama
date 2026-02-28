@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 const NAV_LINKS = [
-  { href: '/partners',  label: 'Partners'      },
+  { href: '/',          label: 'Outreach'       },
+  { href: '/partners',  label: 'Partners'       },
   { href: '/apollo',    label: 'Source'         },
   { href: '/deals',     label: 'Deals'          },
   { href: '/pipeline',  label: 'Pipeline'       },
@@ -46,7 +47,7 @@ export default function Nav() {
       {/* Nav links */}
       <nav style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
         {NAV_LINKS.map(({ href, label }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
+          const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
               key={href}
