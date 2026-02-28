@@ -346,16 +346,51 @@ export default function PartnerDetail() {
 
       {/* Contact Card */}
       {(partner.contactName || partner.contactEmail) && (
-        <div style={{ marginTop: '1rem', padding: '0.875rem 1rem', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: '6px', display: 'inline-block', minWidth: '300px' }}>
+        <div style={{ marginTop: '1rem', padding: '0.875rem 1rem', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: '6px', minWidth: '300px' }}>
           <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#333', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact</div>
           {partner.contactName && (
-            <div style={{ fontSize: '0.95rem' }}>
+            <div style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>
               {partner.contactName}
               {partner.contactTitle && <span style={{ color: '#666', fontSize: '0.88rem' }}> — {partner.contactTitle}</span>}
             </div>
           )}
+
+          {/* Verify still-at-company buttons */}
+          {partner.contactName && (
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+              <a
+                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(partner.contactName + ' ' + partner.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Search LinkedIn to verify this person is still at this company"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  fontSize: '0.75rem', padding: '2px 9px',
+                  background: '#0a66c2', color: '#fff',
+                  borderRadius: '4px', textDecoration: 'none', fontWeight: 600,
+                }}
+              >
+                in Verify on LinkedIn
+              </a>
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent('"' + partner.contactName + '" "' + partner.name + '" site:linkedin.com')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Google search to find their LinkedIn profile"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  fontSize: '0.75rem', padding: '2px 9px',
+                  background: '#fff', color: '#444',
+                  border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none',
+                }}
+              >
+                🌐 Google Search
+              </a>
+            </div>
+          )}
+
           {partner.contactEmail && (
-            <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <a href={`mailto:${partner.contactEmail}`} style={{ fontSize: '0.9rem', color: '#0066cc' }}>
                 {partner.contactEmail}
               </a>
