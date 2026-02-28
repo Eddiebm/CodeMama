@@ -34,6 +34,9 @@ interface Partner {
   contactEmail?: string;
   contactTitle?: string;
   lastContactAt?: string;
+  employmentCheckedAt?: string;
+  employmentStatus?: string;
+  employmentNote?: string;
   messages: { id: string; direction: string; body: string; createdAt: string }[];
   drafts: { id: string; category: string; subject?: string; body: string; status: string; createdAt: string; sentAt?: string }[];
 }
@@ -107,6 +110,10 @@ export default function PartnerDetail() {
   const [logResponseNote, setLogResponseNote]       = useState('');
   const [logResponseOpen, setLogResponseOpen]       = useState(false);
   const [loggingResponse, setLoggingResponse]       = useState(false);
+
+  // Employment verification state
+  const [verifying, setVerifying]       = useState(false);
+  const [verifyResult, setVerifyResult] = useState<any>(null);
 
   // News state
   const [newsItems, setNewsItems]   = useState<NewsItem[]>([]);
@@ -274,6 +281,21 @@ export default function PartnerDetail() {
     }
   }
 
+  async function verifyEmployment() {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const res = await fetch(`/api/partners/${id}/verify-employment`, { method: 'POST' });
+      const data = await res.json();
+      setVerifyResult(data);
+      fetchPartner(); // reload to show stored result
+    } catch (e: any) {
+      setVerifyResult({ error: e.message });
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   async function discardDraft() {
     if (!activeDraft) return;
     await fetch(`/api/drafts/${activeDraft.draftId}`, {
@@ -355,39 +377,63 @@ export default function PartnerDetail() {
             </div>
           )}
 
-          {/* Verify still-at-company buttons */}
-          {partner.contactName && (
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <a
-                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(partner.contactName + ' ' + partner.name)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Search LinkedIn to verify this person is still at this company"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  fontSize: '0.75rem', padding: '2px 9px',
-                  background: '#0a66c2', color: '#fff',
-                  borderRadius: '4px', textDecoration: 'none', fontWeight: 600,
-                }}
-              >
-                in Verify on LinkedIn
-              </a>
-              <a
-                href={`https://www.google.com/search?q=${encodeURIComponent('"' + partner.contactName + '" "' + partner.name + '" site:linkedin.com')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Google search to find their LinkedIn profile"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  fontSize: '0.75rem', padding: '2px 9px',
-                  background: '#fff', color: '#444',
-                  border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none',
-                }}
-              >
-                🌐 Google Search
-              </a>
-            </div>
-          )}
+          {/* Employment verification */}
+          {partner.contactName && (() => {
+            const empStatus = verifyResult?.status || partner.employmentStatus;
+            const empNote   = verifyResult?.note   || partner.employmentNote;
+            const checkedAt = partner.employmentCheckedAt;
+            const statusStyle: Record<string, { color: string; bg: string; icon: string }> = {
+              CONFIRMED: { color: '#1a6b1a', bg: '#efffef', icon: '✅' },
+              MOVED:     { color: '#c00',    bg: '#fff0f0', icon: '🚨' },
+              NOT_FOUND: { color: '#888',    bg: '#f5f5f5', icon: '❓' },
+              ERROR:     { color: '#b85c00', bg: '#fff8ec', icon: '⚠️' },
+            };
+            const ss = empStatus ? statusStyle[empStatus] : null;
+            return (
+              <div style={{ marginBottom: '0.6rem' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={verifyEmployment}
+                    disabled={verifying}
+                    style={{
+                      fontSize: '0.75rem', padding: '3px 10px', cursor: verifying ? 'not-allowed' : 'pointer',
+                      background: verifying ? '#aaa' : '#0a66c2', color: '#fff',
+                      border: 'none', borderRadius: '4px', fontWeight: 600,
+                    }}
+                  >
+                    {verifying ? '🔄 Checking LinkedIn…' : empStatus ? '🔄 Re-verify' : '🔍 Verify Still Employed'}
+                  </button>
+                  <a
+                    href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(partner.contactName + ' ' + partner.name)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '0.72rem', color: '#0a66c2', textDecoration: 'none' }}
+                  >
+                    Manual search ↗
+                  </a>
+                </div>
+                {verifyResult?.error && (
+                  <div style={{ marginTop: '0.35rem', fontSize: '0.78rem', color: '#c00' }}>
+                    ⚠️ {verifyResult.error}
+                  </div>
+                )}
+                {ss && empNote && (
+                  <div style={{
+                    marginTop: '0.35rem', padding: '0.35rem 0.6rem',
+                    background: ss.bg, borderRadius: '5px',
+                    fontSize: '0.78rem', color: ss.color,
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  }}>
+                    {ss.icon} {empNote}
+                    {checkedAt && !verifyResult && (
+                      <span style={{ color: '#aaa', marginLeft: '0.4rem' }}>
+                        · checked {new Date(checkedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {partner.contactEmail && (
             <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

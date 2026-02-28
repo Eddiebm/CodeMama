@@ -19,11 +19,15 @@ model Partner {
   contactName     String?
   contactEmail    String?
   contactTitle    String?
-  partnerType     String           @default("PHARMA")  // PHARMA | BIOTECH | INVESTOR | OTHER
-  messages        Message[]
-  drafts          Draft[]
-  emailValidation EmailValidation?
-  createdAt       DateTime         @default(now())
+  partnerType          String           @default("PHARMA")  // PHARMA | BIOTECH | INVESTOR | OTHER
+  messages             Message[]
+  drafts               Draft[]
+  emailValidation      EmailValidation?
+  createdAt            DateTime         @default(now())
+  // Employment verification (via Proxycurl)
+  employmentCheckedAt  DateTime?
+  employmentStatus     String?          // CONFIRMED | MOVED | NOT_FOUND | ERROR
+  employmentNote       String?          // e.g. "Now at Novartis as SVP BD"
 }
 
 model Message {

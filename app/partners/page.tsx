@@ -22,6 +22,8 @@ export default function Partners() {
   const [importing, setImporting]       = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [showAdd, setShowAdd]           = useState(false);
+  const [bulkVerifying, setBulkVerifying] = useState(false);
+  const [bulkResult, setBulkResult]       = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function loadPartners() {
@@ -63,6 +65,25 @@ export default function Partners() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  async function bulkVerify() {
+    setBulkVerifying(true);
+    setBulkResult(null);
+    try {
+      const res = await fetch('/api/partners/verify-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 20 }),
+      });
+      const data = await res.json();
+      setBulkResult(data);
+      loadPartners();
+    } catch (e: any) {
+      setBulkResult({ error: e.message });
+    } finally {
+      setBulkVerifying(false);
+    }
+  }
+
   const filtered = partners.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.contactName || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -90,6 +111,17 @@ export default function Partners() {
               {importing ? '⏳ Importing...' : '📤 Import Excel / CSV'}
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={importFile} disabled={importing} style={{ display: 'none' }} />
             </label>
+            <button
+              onClick={bulkVerify}
+              disabled={bulkVerifying}
+              title="Check LinkedIn to verify up to 20 contacts are still at their companies (uses Proxycurl API)"
+              style={{
+                padding: '0.5rem 1rem', background: bulkVerifying ? '#aaa' : '#0a66c2', color: '#fff',
+                border: 'none', borderRadius: '8px', cursor: bulkVerifying ? 'not-allowed' : 'pointer',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}>
+              {bulkVerifying ? '🔄 Verifying…' : '🔍 Verify Employment (20)'}
+            </button>
             <button onClick={() => setShowAdd(!showAdd)} style={{
               padding: '0.5rem 1rem', background: '#1a1a2e', color: '#fff',
               border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
@@ -98,6 +130,24 @@ export default function Partners() {
             </button>
           </div>
         </div>
+
+        {/* Bulk verify result */}
+        {bulkResult && (
+          <div style={{ borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem',
+            background: bulkResult.error ? '#fff0f0' : '#f0fdf4',
+            border: `1px solid ${bulkResult.error ? '#f0aaaa' : '#bbf7d0'}`,
+            color: bulkResult.error ? '#c00' : '#166534',
+          }}>
+            {bulkResult.error ? `⚠️ ${bulkResult.error}` : (
+              <>
+                🔍 Verified {bulkResult.checked} contacts —&nbsp;
+                <strong>{bulkResult.confirmed} confirmed</strong>
+                {bulkResult.moved > 0 && <span style={{ color: '#c00' }}> · 🚨 {bulkResult.moved} moved companies</span>}
+                {bulkResult.notFound > 0 && <span style={{ color: '#888' }}> · {bulkResult.notFound} not found</span>}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Import result */}
         {importResult && (
@@ -203,6 +253,16 @@ export default function Partners() {
                   background: p.status === 'ACTIVE' ? '#f0fdf4' : '#f9fafb',
                   color: p.status === 'ACTIVE' ? '#166534' : '#9ca3af', fontWeight: 500,
                 }}>{p.status}</span>
+
+                {p.employmentStatus === 'CONFIRMED' && (
+                  <span title="Still at company — verified via LinkedIn" style={{ fontSize: '0.7rem', color: '#1a6b1a' }}>✅</span>
+                )}
+                {p.employmentStatus === 'MOVED' && (
+                  <span title={p.employmentNote || 'May have left this company'} style={{ fontSize: '0.7rem', color: '#c00' }}>🚨</span>
+                )}
+                {p.employmentStatus === 'NOT_FOUND' && (
+                  <span title="LinkedIn profile not found" style={{ fontSize: '0.7rem', color: '#aaa' }}>❓</span>
+                )}
 
                 <span style={{ color: '#ddd' }}>›</span>
               </div>
