@@ -95,6 +95,12 @@ export default function Home() {
   const [dailyLimit, setDailyLimit] = useState(10);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr());
   const [expanded, setExpanded]     = useState<string | null>(null);
+  const [greeting, setGreeting]     = useState('Good morning');
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h >= 18 || h < 5 ? 'Good evening' : h >= 12 ? 'Good afternoon' : 'Good morning');
+  }, []);
 
   useEffect(() => {
     loadDaily(dailyLimit, selectedDate);
@@ -143,7 +149,7 @@ export default function Home() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#000' }}>Good morning, Eddie 👋</h1>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#000' }}>{greeting}, Eddie 👋</h1>
           <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>{formatFullDate(todayStr())}</p>
         </div>
 

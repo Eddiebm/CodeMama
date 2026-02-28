@@ -5,10 +5,10 @@ import Link from 'next/link';
 import Nav from '@/app/components/Nav';
 
 const TYPE_COLORS: Record<string, string> = {
-  PHARMA:   '#1a56db',
-  BIOTECH:  '#0e9f6e',
-  INVESTOR: '#7c3aed',
-  OTHER:    '#6b7280',
+  PHARMA:   '#000000',
+  BIOTECH:  '#000000',
+  INVESTOR: '#000000',
+  OTHER:    '#666666',
 };
 
 const CACHE_KEY = 'gpce_partners_v2';
@@ -175,7 +175,7 @@ export default function Partners() {
   );
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f7f8fc' }}>
+    <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f5f5f5' }}>
       <Nav />
 
       <style>{`
@@ -187,7 +187,7 @@ export default function Partners() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1a1a2e', fontWeight: 700 }}>Partners</h1>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#000', fontWeight: 700 }}>Partners</h1>
             <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.88rem' }}>
               {skelLoading ? 'Loading…' : `${partners.length} total`}
             </p>
@@ -286,8 +286,8 @@ export default function Partners() {
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button type="submit" disabled={loading} style={{
-                padding: '0.6rem 1.25rem', background: '#1a1a2e', color: '#fff',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600,
+                padding: '0.6rem 1.25rem', background: loading ? '#ccc' : '#000', color: '#fff',
+                border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.88rem', fontWeight: 600,
               }}>
                 {loading ? 'Adding...' : 'Add'}
               </button>
@@ -321,7 +321,7 @@ export default function Partners() {
               <Link key={p.id} href={`/partners/${p.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                 <div
                   style={{ display: 'flex', alignItems: 'center', padding: '0.85rem 1.25rem', borderBottom: i < filtered.length - 1 ? '1px solid #f0f0f0' : 'none', gap: '1rem' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#fafbff')}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <span style={{
@@ -332,7 +332,7 @@ export default function Partners() {
                   }}>{p.partnerType}</span>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1a1a2e' }}>{p.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111' }}>{p.name}</div>
                     {p.contactName && (
                       <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.1rem' }}>
                         {p.contactName}{p.contactTitle ? ` · ${p.contactTitle}` : ''}
@@ -346,8 +346,8 @@ export default function Partners() {
 
                   <span style={{
                     fontSize: '0.72rem', padding: '0.15rem 0.5rem', borderRadius: '10px',
-                    background: p.status === 'ACTIVE' ? '#f0fdf4' : '#f9fafb',
-                    color: p.status === 'ACTIVE' ? '#166534' : '#9ca3af', fontWeight: 500,
+                    background: '#f0f0f0',
+                    color: p.status === 'ACTIVE' ? '#333' : '#999', fontWeight: 500,
                   }}>{p.status}</span>
 
                   {p.employmentStatus === 'CONFIRMED' && <span title="Still at company" style={{ fontSize: '0.7rem' }}>✅</span>}
@@ -373,14 +373,14 @@ export default function Partners() {
 
 // ── Tiny helpers ──────────────────────────────────────────────────────────
 
-function Banner({ children, color, error }: { children: React.ReactNode; color?: string; error?: any }) {
+function Banner({ children, color: _color, error }: { children: React.ReactNode; color?: string; error?: any }) {
   const isError = !!error;
   return (
     <div style={{
       borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem',
-      background: isError ? '#fff0f0' : color === 'blue' ? '#eff6ff' : '#f0fdf4',
-      border: `1px solid ${isError ? '#f0aaaa' : color === 'blue' ? '#bfdbfe' : '#bbf7d0'}`,
-      color: isError ? '#c00' : color === 'blue' ? '#1e40af' : '#166534',
+      background: isError ? '#fff0f0' : '#f5f5f5',
+      border: `1px solid ${isError ? '#f0aaaa' : '#ddd'}`,
+      color: isError ? '#c00' : '#333',
     }}>
       {children}
     </div>
