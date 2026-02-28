@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const NAV_LINKS = [
   { href: '/partners',  label: 'Partners'      },
   { href: '/apollo',    label: 'Source'         },
+  { href: '/deals',     label: 'Deals'          },
   { href: '/pipeline',  label: 'Pipeline'       },
   { href: '/news',      label: 'Intelligence'   },
   { href: '/drafts',    label: 'Drafts'         },
