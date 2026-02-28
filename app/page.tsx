@@ -45,6 +45,9 @@ function offsetDate(base: string, days: number): string {
   return d.toISOString().split('T')[0];
 }
 
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS_SHORT   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
 function formatDateLabel(dateStr: string): string {
   const today  = todayStr();
   const tomorrow = offsetDate(today, 1);
@@ -53,12 +56,15 @@ function formatDateLabel(dateStr: string): string {
   if (dateStr === tomorrow)  return 'Tomorrow';
   if (dateStr === yesterday) return 'Yesterday';
   const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${DAYS_SHORT[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
 }
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function formatFullDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return `${DAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 const MAX_FUTURE_DAYS = 14;
