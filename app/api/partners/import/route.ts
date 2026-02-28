@@ -52,13 +52,21 @@ export async function POST(req: NextRequest) {
       console.log('first row sample:', JSON.stringify(rows[0]).slice(0, 300));
     }
 
+    // Load existing names for duplicate detection
+    const existing = await db.partner.findMany({ select: { name: true } });
+    const existingNames = new Set(existing.map(p => p.name.toLowerCase().trim()));
+
     // Build batch
     const toCreate: any[] = [];
     let skipped = 0;
+    let duplicates = 0;
 
     for (const row of rows) {
       const name = row['investor_name'] || row['name'] || row['Name'] || row['Company'];
       if (!name || name.toString().trim() === '') { skipped++; continue; }
+
+      const normalizedName = name.toString().trim().toLowerCase();
+      if (existingNames.has(normalizedName)) { duplicates++; continue; }
 
       const country = row['country'] || row['Country'] || row['region'] || row['Region'] || '';
       const interest = row['indication_preference'] || row['sector'] || row['interest'] || row['Interest'] || '';
@@ -67,6 +75,9 @@ export async function POST(req: NextRequest) {
       const contactEmail = row['contact_email'] || row['email'] || row['Email'] || '';
       const contactTitle = row['contact_job_title'] || row['title'] || '';
       const contactName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+      // Track this name so duplicates within the same file are also caught
+      existingNames.add(normalizedName);
 
       toCreate.push({
         name: name.toString().trim(),
@@ -80,9 +91,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Batch insert
-    await db.partner.createMany({ data: toCreate });
+    if (toCreate.length > 0) {
+      await db.partner.createMany({ data: toCreate });
+    }
 
-    return NextResponse.json({ created: toCreate.length, skipped });
+    return NextResponse.json({ created: toCreate.length, skipped, duplicates });
 
   } catch (err: any) {
     console.error('Import error:', err);

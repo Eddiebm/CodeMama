@@ -95,7 +95,9 @@ export default function Partners() {
         {/* Import result */}
         {importResult && (
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#166534' }}>
-            ✅ {importResult.created} partners imported{importResult.skipped > 0 && ` · ${importResult.skipped} skipped`}
+            ✅ {importResult.created} partner{importResult.created !== 1 ? 's' : ''} imported
+            {importResult.duplicates > 0 && <span style={{ color: '#92400e' }}> · {importResult.duplicates} duplicate{importResult.duplicates !== 1 ? 's' : ''} skipped</span>}
+            {importResult.skipped > 0 && <span style={{ color: '#6b7280' }}> · {importResult.skipped} blank row{importResult.skipped !== 1 ? 's' : ''} ignored</span>}
           </div>
         )}
 
