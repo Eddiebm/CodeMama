@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid region' }, { status: 400 });
   }
 
-  // Duplicate check (case-insensitive)
-  const existing = await db.partner.findFirst({
-    where: { name: { equals: name.trim(), mode: 'insensitive' } },
-  });
+  // Duplicate check (case-insensitive) — SQLite doesn't support mode:'insensitive'
+  const normalised = name.trim().toLowerCase();
+  const allNames = await db.partner.findMany({ select: { name: true } });
+  const isDuplicate = allNames.some(p => p.name.toLowerCase() === normalised);
 
-  if (existing) {
+  if (isDuplicate) {
     return NextResponse.json(
       { error: `"${name.trim()}" already exists in your database.` },
       { status: 409 }
