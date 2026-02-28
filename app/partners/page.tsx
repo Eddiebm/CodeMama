@@ -241,7 +241,7 @@ export default function Partners() {
         {seedResult && (
           <Banner color="blue" error={seedResult.error}>
             {seedResult.error ? `⚠️ ${seedResult.error}` :
-              `🇨🇳 Seeded ${seedResult.created} Chinese oncology companies${seedResult.duplicates > 0 ? ` · ${seedResult.duplicates} already existed` : ''}`}
+              `🇨🇳 ${seedResult.created > 0 ? `${seedResult.created} companies added` : ''}${seedResult.updated > 0 ? `${seedResult.created > 0 ? ' · ' : ''}${seedResult.updated} contacts filled in` : ''}${seedResult.duplicates > 0 ? ` · ${seedResult.duplicates} already complete` : ''}`}
           </Banner>
         )}
         {bulkResult && (
