@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set('gpce_session', process.env.APP_PASSWORD!, {
+  res.cookies.set('gpce_session', 'authenticated', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

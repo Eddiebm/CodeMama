@@ -12,7 +12,7 @@ export function middleware(req: NextRequest) {
 
   // Check session cookie
   const session = req.cookies.get('gpce_session');
-  if (!session || session.value !== process.env.APP_PASSWORD) {
+  if (!session || session.value !== 'authenticated') {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.search = '';
