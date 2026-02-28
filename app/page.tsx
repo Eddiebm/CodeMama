@@ -64,19 +64,12 @@ function formatFullDate(dateStr: string): string {
 const MAX_FUTURE_DAYS = 14;
 const MAX_PAST_DAYS   = 30;
 
-const TYPE_STYLE: Record<string, { color: string; bg: string }> = {
-  PHARMA:   { color: '#1a56db', bg: '#eef3ff' },
-  BIOTECH:  { color: '#0e7c6b', bg: '#edfaf7' },
-  INVESTOR: { color: '#7c3aed', bg: '#f5f0ff' },
-  OTHER:    { color: '#555',    bg: '#f4f4f4' },
-};
-
 const REGION_FLAG: Record<string, string> = {
   US: '🇺🇸', EU: '🇪🇺', CN: '🇨🇳',
 };
 
 function ScoreDot({ score }: { score: number }) {
-  const color = score >= 150 ? '#1a6b1a' : score >= 100 ? '#1a56db' : '#b85c00';
+  const color = score >= 150 ? '#000' : score >= 100 ? '#555' : '#aaa';
   return (
     <span style={{
       display: 'inline-block',
@@ -91,6 +84,7 @@ function ScoreDot({ score }: { score: number }) {
 
 export default function Home() {
   const [daily, setDaily]           = useState<DailyData | null>(null);
+  const [dailyError, setDailyError] = useState('');
   const [loading, setLoading]       = useState(true);
   const [dailyLimit, setDailyLimit] = useState(10);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr());
@@ -103,12 +97,19 @@ export default function Home() {
   async function loadDaily(limit: number, date: string) {
     setLoading(true);
     setExpanded(null);
+    setDailyError('');
     try {
       const res = await fetch(`/api/outreach/daily?limit=${limit}&date=${date}`);
       const data = await res.json();
-      setDaily(data);
-    } catch (e) {
-      console.error(e);
+      if (!res.ok) {
+        setDailyError(data.error || 'Failed to load outreach list');
+        setDaily(null);
+      } else {
+        setDaily(data);
+      }
+    } catch (e: any) {
+      setDailyError(e.message || 'Network error');
+      setDaily(null);
     } finally {
       setLoading(false);
     }
@@ -128,7 +129,7 @@ export default function Home() {
   const isToday      = selectedDate === today;
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f7f8fc' }}>
+    <main style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f5f5f5' }}>
 
       <Nav />
 
@@ -136,7 +137,7 @@ export default function Home() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#1a1a2e' }}>Good morning, Eddie 👋</h1>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#000' }}>Good morning, Eddie 👋</h1>
           <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>{formatFullDate(todayStr())}</p>
         </div>
 
@@ -144,13 +145,13 @@ export default function Home() {
         {daily && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
             {[
-              { label: 'Total Partners', value: daily.totalPartners, color: '#1a1a2e' },
-              { label: 'Ready to Contact', value: daily.totalEligible, color: '#1a56db' },
-              { label: 'Emails Verified', value: daily.stats?.email?.verified ?? 0, color: '#1a6b1a' },
-              { label: 'Investors', value: daily.stats?.byType?.INVESTOR ?? 0, color: '#7c3aed' },
+              { label: 'Total Partners',   value: daily.totalPartners },
+              { label: 'Ready to Contact', value: daily.totalEligible },
+              { label: 'Emails Verified',  value: daily.stats?.email?.verified ?? 0 },
+              { label: 'Investors',        value: daily.stats?.byType?.INVESTOR ?? 0 },
             ].map(s => (
-              <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '1rem 1.25rem' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: s.color }}>{s.value}</div>
+              <div key={s.label} style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '10px', padding: '1rem 1.25rem' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#000' }}>{s.value}</div>
                 <div style={{ fontSize: '0.8rem', color: '#777', marginTop: '0.2rem' }}>{s.label}</div>
               </div>
             ))}
@@ -158,12 +159,12 @@ export default function Home() {
         )}
 
         {/* ── Today's Outreach ── */}
-        <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '12px', overflow: 'hidden', marginBottom: '2rem' }}>
+        <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '12px', overflow: 'hidden', marginBottom: '2rem' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f0f0f0' }}>
             {/* Title row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#1a1a2e' }}>🎯 Outreach List</h2>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#000' }}>🎯 Outreach List</h2>
                 <p style={{ margin: '0.1rem 0 0', fontSize: '0.8rem', color: '#888' }}>
                   Scored · diversified · rotated daily
                 </p>
@@ -172,7 +173,7 @@ export default function Home() {
                 <select
                   value={dailyLimit}
                   onChange={e => setDailyLimit(parseInt(e.target.value))}
-                  style={{ padding: '0.35rem 0.6rem', border: '1px solid #ddd', borderRadius: '5px', fontSize: '0.82rem', background: '#fff' }}
+                  style={{ padding: '0.35rem 0.6rem', border: '1px solid #ddd', borderRadius: '5px', fontSize: '0.82rem', background: '#fff', color: '#333' }}
                 >
                   {[5, 8, 10, 15, 20].map(n => <option key={n} value={n}>{n} per day</option>)}
                 </select>
@@ -208,12 +209,12 @@ export default function Home() {
                 flex: 1,
                 textAlign: 'center',
                 padding: '0.3rem 0.75rem',
-                border: `1px solid ${isToday ? '#1a56db' : '#ddd'}`,
+                border: `1px solid ${isToday ? '#000' : '#ddd'}`,
                 borderRadius: '5px',
-                background: isToday ? '#eef3ff' : '#fafafa',
+                background: isToday ? '#000' : '#fafafa',
                 fontSize: '0.88rem',
                 fontWeight: isToday ? 700 : 500,
-                color: isToday ? '#1a56db' : '#444',
+                color: isToday ? '#fff' : '#444',
               }}>
                 {formatDateLabel(selectedDate)}
                 {!isToday && (
@@ -228,12 +229,12 @@ export default function Home() {
                   onClick={() => setSelectedDate(todayStr())}
                   style={{
                     padding: '0.3rem 0.75rem',
-                    border: '1px solid #1a56db',
+                    border: '1px solid #000',
                     borderRadius: '5px',
-                    background: '#eef3ff',
+                    background: '#000',
                     fontSize: '0.78rem',
                     cursor: 'pointer',
-                    color: '#1a56db',
+                    color: '#fff',
                     fontWeight: 600,
                   }}
                 >
@@ -270,18 +271,23 @@ export default function Home() {
 
           {loading && <p style={{ padding: '1.5rem', color: '#888', fontSize: '0.9rem' }}>Loading recommendations…</p>}
 
-          {!loading && daily && daily.recommendations.length === 0 && (
+          {dailyError && (
+            <p style={{ padding: '1.5rem', color: '#c00', fontSize: '0.88rem' }}>
+              ⚠️ {dailyError}
+            </p>
+          )}
+
+          {!loading && daily && (daily.recommendations ?? []).length === 0 && (
             <p style={{ padding: '1.5rem', color: '#888', fontSize: '0.9rem' }}>
               No eligible partners found. Make sure partners have contact emails in the database.
             </p>
           )}
 
-          {!loading && daily && daily.recommendations.map((p, i) => {
-            const ts = TYPE_STYLE[p.partnerType] || TYPE_STYLE.OTHER;
+          {!loading && daily && (daily.recommendations ?? []).map((p, i) => {
             const isOpen = expanded === p.id;
 
             return (
-              <div key={p.id} style={{ borderBottom: i < daily.recommendations.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+              <div key={p.id} style={{ borderBottom: i < (daily.recommendations ?? []).length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                 <div
                   onClick={() => setExpanded(isOpen ? null : p.id)}
                   style={{
@@ -291,22 +297,22 @@ export default function Home() {
                     padding: '0.9rem 1.5rem',
                     cursor: 'pointer',
                     transition: 'background 0.1s',
-                    background: isOpen ? '#fafbff' : 'transparent',
+                    background: isOpen ? '#f9f9f9' : 'transparent',
                   }}
-                  onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = '#f9f9fc'; }}
-                  onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
+                  onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = '#f9f9f9'; }}
+                  onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = isOpen ? '#f9f9f9' : 'transparent'; }}
                 >
                   {/* Rank */}
                   <span style={{ minWidth: 22, fontSize: '0.8rem', color: '#aaa', fontWeight: 600 }}>#{i + 1}</span>
 
                   {/* Type badge */}
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: ts.bg, color: ts.color, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: '#f0f0f0', color: '#444', whiteSpace: 'nowrap' }}>
                     {p.partnerType}
                   </span>
 
                   {/* Company + contact */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.93rem', color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.93rem', color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.name}
                     </div>
                     {p.contactName && (
@@ -331,13 +337,13 @@ export default function Home() {
 
                 {/* Expanded detail */}
                 {isOpen && (
-                  <div style={{ padding: '0.75rem 1.5rem 1.1rem 3.5rem', background: '#fafbff', borderTop: '1px solid #f0f0f0' }}>
+                  <div style={{ padding: '0.75rem 1.5rem 1.1rem 3.5rem', background: '#f9f9f9', borderTop: '1px solid #f0f0f0' }}>
                     <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
                         <div style={{ fontSize: '0.88rem', color: '#333' }}>
                           {p.contactEmail || <em style={{ color: '#bbb' }}>No email</em>}
-                          {p.emailStatus === 'VALID' && <span style={{ color: '#1a6b1a', marginLeft: 5, fontSize: '0.78rem' }}>✓ verified</span>}
+                          {p.emailStatus === 'VALID'   && <span style={{ color: '#333', marginLeft: 5, fontSize: '0.78rem' }}>✓ verified</span>}
                           {p.emailStatus === 'INVALID' && <span style={{ color: '#c00', marginLeft: 5, fontSize: '0.78rem' }}>✗ invalid</span>}
                         </div>
                       </div>
@@ -357,7 +363,7 @@ export default function Home() {
                         href={`/partners/${p.id}`}
                         style={{
                           padding: '0.4rem 1rem',
-                          background: '#1a56db',
+                          background: '#000',
                           color: '#fff',
                           borderRadius: '6px',
                           fontSize: '0.85rem',
@@ -392,15 +398,15 @@ export default function Home() {
         {/* ── Quick links ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
           {[
-            { href: '/news', icon: '📰', title: 'Intelligence Feed', desc: 'Industry news, oncology deals, M&A, and partner company updates' },
-            { href: '/partners', icon: '👥', title: 'Partner Database', desc: '562 pharma, biotech, and investor contacts from the LSN database' },
-            { href: '/drafts', icon: '📬', title: 'Pending Drafts', desc: 'Review and approve outreach emails before they are sent' },
+            { href: '/news',     icon: '📰', title: 'Intelligence Feed',  desc: 'Industry news, oncology deals, M&A, and partner company updates' },
+            { href: '/partners', icon: '👥', title: 'Partner Database',   desc: '562 pharma, biotech, and investor contacts from the LSN database' },
+            { href: '/drafts',   icon: '📬', title: 'Pending Drafts',     desc: 'Review and approve outreach emails before they are sent' },
           ].map(card => (
             <Link key={card.href} href={card.href} style={{ textDecoration: 'none' }}>
               <div
                 style={{
                   background: '#fff',
-                  border: '1px solid #e8e8e8',
+                  border: '1px solid #e5e5e5',
                   borderRadius: '10px',
                   padding: '1.1rem 1.25rem',
                   transition: 'box-shadow 0.12s',
@@ -410,7 +416,7 @@ export default function Home() {
                 onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
               >
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>{card.icon}</div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1a1a2e', marginBottom: '0.3rem' }}>{card.title}</div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#000', marginBottom: '0.3rem' }}>{card.title}</div>
                 <div style={{ fontSize: '0.8rem', color: '#777', lineHeight: '1.45' }}>{card.desc}</div>
               </div>
             </Link>

@@ -171,7 +171,7 @@ export default function SettingsPage() {
           disabled={saving}
           style={{
             padding: '0.65rem 1.75rem',
-            background: saving ? '#aaa' : '#1a56db',
+            background: saving ? '#ccc' : '#000',
             color: '#fff',
             border: 'none',
             borderRadius: '6px',
@@ -183,7 +183,7 @@ export default function SettingsPage() {
           {saving ? 'Saving…' : '💾 Save Changes'}
         </button>
         {saved && (
-          <span style={{ color: '#1a6b1a', fontSize: '0.88rem' }}>
+          <span style={{ color: '#333', fontSize: '0.88rem' }}>
             ✅ Saved — next generated email will use these settings
           </span>
         )}

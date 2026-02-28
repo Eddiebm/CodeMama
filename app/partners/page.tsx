@@ -208,7 +208,7 @@ export default function Partners() {
               disabled={seeding}
               title="One-click: add 50 top Chinese oncology pharma & biotech companies"
               style={{
-                padding: '0.5rem 1rem', background: seeding ? '#aaa' : '#dc2626',
+                padding: '0.5rem 1rem', background: seeding ? '#ccc' : '#000',
                 color: '#fff', border: 'none', borderRadius: '8px',
                 cursor: seeding ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600,
               }}
@@ -220,7 +220,7 @@ export default function Partners() {
               onClick={bulkVerify}
               disabled={bulkVerifying}
               style={{
-                padding: '0.5rem 1rem', background: bulkVerifying ? '#aaa' : '#0a66c2', color: '#fff',
+                padding: '0.5rem 1rem', background: bulkVerifying ? '#ccc' : '#000', color: '#fff',
                 border: 'none', borderRadius: '8px', cursor: bulkVerifying ? 'not-allowed' : 'pointer',
                 fontSize: '0.85rem', fontWeight: 600,
               }}
@@ -229,7 +229,7 @@ export default function Partners() {
             </button>
 
             <button onClick={() => setShowAdd(!showAdd)} style={{
-              padding: '0.5rem 1rem', background: '#1a1a2e', color: '#fff',
+              padding: '0.5rem 1rem', background: '#000', color: '#fff',
               border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
             }}>
               + Add Partner

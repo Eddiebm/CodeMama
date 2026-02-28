@@ -42,10 +42,10 @@ interface Partner {
 }
 
 const TYPE_META: Record<PartnerType, { label: string; color: string; bg: string; description: string }> = {
-  PHARMA:   { label: 'Pharma',    color: '#1a56db', bg: '#eef3ff', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
-  BIOTECH:  { label: 'Biotech',   color: '#0e7c6b', bg: '#edfaf7', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
-  INVESTOR: { label: 'Investor',  color: '#7c3aed', bg: '#f5f0ff', description: 'VC/investor-focused email — market opportunity, milestones & capital efficiency' },
-  OTHER:    { label: 'Other',     color: '#555',    bg: '#f4f4f4', description: 'Standard outreach email' },
+  PHARMA:   { label: 'Pharma',    color: '#000', bg: '#f0f0f0', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
+  BIOTECH:  { label: 'Biotech',   color: '#000', bg: '#f0f0f0', description: 'BD/licensing-focused email — therapeutic alignment & pipeline fit' },
+  INVESTOR: { label: 'Investor',  color: '#000', bg: '#f0f0f0', description: 'VC/investor-focused email — market opportunity, milestones & capital efficiency' },
+  OTHER:    { label: 'Other',     color: '#555', bg: '#f4f4f4', description: 'Standard outreach email' },
 };
 
 type EmailStatus = 'UNCHECKED' | 'VALID' | 'INVALID' | 'NO_EMAIL' | 'CHECKING';
@@ -80,12 +80,12 @@ function daysSinceLastSent(partner: Partner): number {
 }
 
 const STAGE_META: Record<PipelineStage, { label: string; color: string; bg: string; border: string; icon: string }> = {
-  NOT_STARTED:   { label: 'Not Started',    icon: '🆕', color: '#555',    bg: '#f5f5f5', border: '#ddd' },
-  AWAITING:      { label: 'Awaiting Reply', icon: '📤', color: '#1a56db', bg: '#eef3ff', border: '#b8ccf0' },
-  FOLLOW_UP_DUE: { label: 'Follow-up Due',  icon: '⏰', color: '#b85c00', bg: '#fff8ec', border: '#f0d080' },
-  RESPONDED:     { label: 'Responded',      icon: '💬', color: '#1a6b1a', bg: '#efffef', border: '#99d499' },
-  DONE:          { label: 'Done',           icon: '✅', color: '#777',    bg: '#f9f9f9', border: '#ddd' },
-  OPT_OUT:       { label: 'Opted Out',      icon: '🚫', color: '#c00',    bg: '#fff0f0', border: '#f0aaaa' },
+  NOT_STARTED:   { label: 'Not Started',    icon: '🆕', color: '#555',  bg: '#f5f5f5', border: '#ddd' },
+  AWAITING:      { label: 'Awaiting Reply', icon: '📤', color: '#444',  bg: '#f5f5f5', border: '#ccc' },
+  FOLLOW_UP_DUE: { label: 'Follow-up Due',  icon: '⏰', color: '#111',  bg: '#f0f0f0', border: '#bbb' },
+  RESPONDED:     { label: 'Responded',      icon: '💬', color: '#000',  bg: '#efefef', border: '#ccc' },
+  DONE:          { label: 'Done',           icon: '✅', color: '#777',  bg: '#f9f9f9', border: '#ddd' },
+  OPT_OUT:       { label: 'Opted Out',      icon: '🚫', color: '#c00',  bg: '#fff0f0', border: '#f0aaaa' },
 };
 
 export default function PartnerDetail() {
@@ -307,7 +307,7 @@ export default function PartnerDetail() {
     setError('');
   }
 
-  if (!partner) return <p style={{ padding: '2rem' }}>Loading…</p>;
+  if (!partner) return <p style={{ padding: '2rem', fontFamily: 'system-ui, sans-serif' }}>Loading…</p>;
 
   const pType = (partner.partnerType || 'PHARMA') as PartnerType;
   const typeMeta = TYPE_META[pType];
@@ -315,19 +315,19 @@ export default function PartnerDetail() {
   const emailBadge: Record<EmailStatus, { label: string; color: string }> = {
     UNCHECKED: { label: '⚪ Not checked', color: '#888' },
     CHECKING:  { label: '🔄 Checking…',   color: '#888' },
-    VALID:     { label: '✅ Valid',         color: '#1a6b1a' },
+    VALID:     { label: '✅ Valid',         color: '#333' },
     INVALID:   { label: '❌ Invalid',       color: '#c00' },
-    NO_EMAIL:  { label: '⚠️ No email',     color: '#b85c00' },
+    NO_EMAIL:  { label: '⚠️ No email',     color: '#555' },
   };
 
   const canSend = emailStatus === 'VALID' && !!activeDraft && !sending;
   const alreadySent = partner.drafts.some(d => d.category === 'OUTREACH' && d.status === 'SENT');
 
   return (
-    <main style={{ padding: '2rem', maxWidth: '780px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ padding: '2rem', maxWidth: '780px', margin: '0 auto', fontFamily: 'system-ui, sans-serif', background: '#f5f5f5', minHeight: '100vh' }}>
       <a href="/partners" style={{ fontSize: '0.88rem', color: '#555', textDecoration: 'none' }}>← Back to Partners</a>
 
-      <h1 style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '1.5rem' }}>{partner.name}</h1>
+      <h1 style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontSize: '1.5rem', color: '#000' }}>{partner.name}</h1>
       <p style={{ color: '#555', margin: '0 0 0.5rem', fontSize: '0.9rem' }}>
         Region: <strong>{partner.region}</strong> &nbsp;·&nbsp; Status: <strong>{partner.status}</strong>
         {partner.lastContactAt && (
@@ -346,10 +346,10 @@ export default function PartnerDetail() {
               padding: '3px 10px',
               fontSize: '0.78rem',
               fontWeight: pType === t ? 700 : 400,
-              border: `1px solid ${pType === t ? TYPE_META[t].color : '#ccc'}`,
+              border: `1px solid ${pType === t ? '#000' : '#ccc'}`,
               borderRadius: '12px',
-              background: pType === t ? TYPE_META[t].bg : '#fff',
-              color: pType === t ? TYPE_META[t].color : '#777',
+              background: pType === t ? '#000' : '#fff',
+              color: pType === t ? '#fff' : '#777',
               cursor: typeChanging ? 'not-allowed' : 'pointer',
               transition: 'all 0.15s',
             }}
@@ -363,15 +363,15 @@ export default function PartnerDetail() {
       </div>
 
       {partner.humanRequired && (
-        <p style={{ color: 'red', fontWeight: 'bold', margin: '0.5rem 0' }}>⚠️ HUMAN REQUIRED — escalated</p>
+        <p style={{ color: '#c00', fontWeight: 'bold', margin: '0.5rem 0' }}>⚠️ HUMAN REQUIRED — escalated</p>
       )}
 
       {/* Contact Card */}
       {(partner.contactName || partner.contactEmail) && (
-        <div style={{ marginTop: '1rem', padding: '0.875rem 1rem', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: '6px', minWidth: '300px' }}>
+        <div style={{ marginTop: '1rem', padding: '0.875rem 1rem', background: '#fff', border: '1px solid #e5e5e5', borderRadius: '8px', minWidth: '300px' }}>
           <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#333', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact</div>
           {partner.contactName && (
-            <div style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+            <div style={{ fontSize: '0.95rem', marginBottom: '0.4rem', color: '#111' }}>
               {partner.contactName}
               {partner.contactTitle && <span style={{ color: '#666', fontSize: '0.88rem' }}> — {partner.contactTitle}</span>}
             </div>
@@ -383,10 +383,10 @@ export default function PartnerDetail() {
             const empNote   = verifyResult?.note   || partner.employmentNote;
             const checkedAt = partner.employmentCheckedAt;
             const statusStyle: Record<string, { color: string; bg: string; icon: string }> = {
-              CONFIRMED: { color: '#1a6b1a', bg: '#efffef', icon: '✅' },
-              MOVED:     { color: '#c00',    bg: '#fff0f0', icon: '🚨' },
-              NOT_FOUND: { color: '#888',    bg: '#f5f5f5', icon: '❓' },
-              ERROR:     { color: '#b85c00', bg: '#fff8ec', icon: '⚠️' },
+              CONFIRMED: { color: '#000', bg: '#f0f0f0', icon: '✅' },
+              MOVED:     { color: '#c00', bg: '#fff0f0', icon: '🚨' },
+              NOT_FOUND: { color: '#888', bg: '#f5f5f5', icon: '❓' },
+              ERROR:     { color: '#555', bg: '#f5f5f5', icon: '⚠️' },
             };
             const ss = empStatus ? statusStyle[empStatus] : null;
             return (
@@ -397,7 +397,7 @@ export default function PartnerDetail() {
                     disabled={verifying}
                     style={{
                       fontSize: '0.75rem', padding: '3px 10px', cursor: verifying ? 'not-allowed' : 'pointer',
-                      background: verifying ? '#aaa' : '#0a66c2', color: '#fff',
+                      background: verifying ? '#ccc' : '#000', color: '#fff',
                       border: 'none', borderRadius: '4px', fontWeight: 600,
                     }}
                   >
@@ -406,7 +406,7 @@ export default function PartnerDetail() {
                   <a
                     href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(partner.contactName + ' ' + partner.name)}`}
                     target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: '0.72rem', color: '#0a66c2', textDecoration: 'none' }}
+                    style={{ fontSize: '0.72rem', color: '#555', textDecoration: 'underline' }}
                   >
                     Manual search ↗
                   </a>
@@ -437,13 +437,13 @@ export default function PartnerDetail() {
 
           {partner.contactEmail && (
             <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <a href={`mailto:${partner.contactEmail}`} style={{ fontSize: '0.9rem', color: '#0066cc' }}>
+              <a href={`mailto:${partner.contactEmail}`} style={{ fontSize: '0.9rem', color: '#000', textDecoration: 'underline' }}>
                 {partner.contactEmail}
               </a>
               <button
                 onClick={checkEmail}
                 disabled={emailStatus === 'CHECKING'}
-                style={{ fontSize: '0.75rem', padding: '2px 8px', cursor: 'pointer', border: '1px solid #bbb', borderRadius: '4px', background: '#fff' }}
+                style={{ fontSize: '0.75rem', padding: '2px 8px', cursor: 'pointer', border: '1px solid #bbb', borderRadius: '4px', background: '#fff', color: '#444' }}
               >
                 Check
               </button>
@@ -482,17 +482,17 @@ export default function PartnerDetail() {
                 {sm.icon} {sm.label}
               </span>
               {stage === 'FOLLOW_UP_DUE' && (
-                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#b85c00' }}>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#555' }}>
                   — {days} days since last contact{followUpCount > 0 ? ` · ${followUpCount} follow-up${followUpCount > 1 ? 's' : ''} already sent` : ''}
                 </span>
               )}
               {stage === 'AWAITING' && (
-                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#555' }}>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#666' }}>
                   — sent {days}d ago, waiting for reply
                 </span>
               )}
               {stage === 'RESPONDED' && (
-                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#1a6b1a' }}>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#444' }}>
                   — reply received · generate a response email below
                 </span>
               )}
@@ -505,7 +505,7 @@ export default function PartnerDetail() {
                   disabled={followUpGenerating}
                   style={{
                     padding: '0.35rem 0.9rem',
-                    background: followUpGenerating ? '#aaa' : '#b85c00',
+                    background: followUpGenerating ? '#ccc' : '#000',
                     color: '#fff', border: 'none', borderRadius: '5px',
                     fontSize: '0.82rem', fontWeight: 600,
                     cursor: followUpGenerating ? 'not-allowed' : 'pointer',
@@ -521,8 +521,8 @@ export default function PartnerDetail() {
                       onClick={() => setLogResponseOpen(true)}
                       style={{
                         padding: '0.35rem 0.9rem',
-                        background: '#fff', color: '#1a6b1a',
-                        border: '1px solid #99d499', borderRadius: '5px',
+                        background: '#fff', color: '#333',
+                        border: '1px solid #ccc', borderRadius: '5px',
                         fontSize: '0.82rem', cursor: 'pointer',
                       }}
                     >
@@ -534,7 +534,7 @@ export default function PartnerDetail() {
                     disabled={followUpGenerating}
                     style={{
                       padding: '0.35rem 0.9rem',
-                      background: followUpGenerating ? '#aaa' : '#1a6b1a',
+                      background: followUpGenerating ? '#ccc' : '#000',
                       color: '#fff', border: 'none', borderRadius: '5px',
                       fontSize: '0.82rem', fontWeight: 600,
                       cursor: followUpGenerating ? 'not-allowed' : 'pointer',
@@ -549,8 +549,8 @@ export default function PartnerDetail() {
                   onClick={() => setLogResponseOpen(true)}
                   style={{
                     padding: '0.35rem 0.9rem',
-                    background: '#fff', color: '#1a56db',
-                    border: '1px solid #b8ccf0', borderRadius: '5px',
+                    background: '#fff', color: '#333',
+                    border: '1px solid #ccc', borderRadius: '5px',
                     fontSize: '0.82rem', cursor: 'pointer',
                   }}
                 >
@@ -564,8 +564,8 @@ export default function PartnerDetail() {
 
       {/* Log response inline form */}
       {logResponseOpen && (
-        <div style={{ marginTop: '0.75rem', padding: '0.875rem 1rem', background: '#f9fff9', border: '1px solid #99d499', borderRadius: '7px' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem', color: '#1a6b1a' }}>
+        <div style={{ marginTop: '0.75rem', padding: '0.875rem 1rem', background: '#fff', border: '1px solid #e5e5e5', borderRadius: '7px' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem', color: '#000' }}>
             📥 Log their response
           </div>
           <textarea
@@ -579,7 +579,7 @@ export default function PartnerDetail() {
             <button
               onClick={logResponse}
               disabled={loggingResponse}
-              style={{ padding: '0.35rem 0.9rem', background: '#1a6b1a', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+              style={{ padding: '0.35rem 0.9rem', background: loggingResponse ? '#ccc' : '#000', color: '#fff', border: 'none', borderRadius: '5px', fontSize: '0.82rem', fontWeight: 600, cursor: loggingResponse ? 'not-allowed' : 'pointer' }}
             >
               {loggingResponse ? 'Saving…' : '✓ Save Response'}
             </button>
@@ -594,11 +594,11 @@ export default function PartnerDetail() {
       )}
 
       {/* ── OUTREACH SECTION ── */}
-      <div style={{ marginTop: '2rem', borderTop: '2px solid #e8e8e8', paddingTop: '1.5rem' }}>
-        <h2 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>📧 Outreach Email</h2>
+      <div style={{ marginTop: '2rem', borderTop: '2px solid #e5e5e5', paddingTop: '1.5rem' }}>
+        <h2 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#000' }}>📧 Outreach Email</h2>
 
         {sentMessage && (
-          <div style={{ padding: '0.75rem 1rem', background: '#efffef', border: '1px solid #99d499', borderRadius: '6px', marginBottom: '1rem', color: '#1a6b1a', fontSize: '0.9rem' }}>
+          <div style={{ padding: '0.75rem 1rem', background: '#f0f0f0', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '1rem', color: '#000', fontSize: '0.9rem' }}>
             {sentMessage}
           </div>
         )}
@@ -622,7 +622,7 @@ export default function PartnerDetail() {
               disabled={generating || !partner.contactEmail}
               style={{
                 padding: '0.6rem 1.4rem',
-                background: generating ? '#aaa' : '#1a56db',
+                background: generating ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -634,7 +634,7 @@ export default function PartnerDetail() {
               {generating ? '⏳ Researching & Generating…' : alreadySent ? '🔁 Generate New Draft' : '✨ Generate Outreach Email'}
             </button>
             {!partner.contactEmail && (
-              <p style={{ color: '#b85c00', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+              <p style={{ color: '#888', fontSize: '0.85rem', marginTop: '0.5rem' }}>
                 ⚠️ No contact email on record — cannot send outreach.
               </p>
             )}
@@ -643,12 +643,12 @@ export default function PartnerDetail() {
 
         {/* Draft Preview & Edit */}
         {activeDraft && (
-          <div style={{ marginTop: '1.25rem', border: '1px solid #b8ccf0', borderRadius: '8px', background: '#f5f8ff', padding: '1.25rem' }}>
-            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#1a3c7a', fontSize: '0.95rem' }}>
+          <div style={{ marginTop: '1.25rem', border: '1px solid #e5e5e5', borderRadius: '8px', background: '#fff', padding: '1.25rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#000', fontSize: '0.95rem' }}>
               📝 Review &amp; Edit Draft
-              {activeDraft?.draftType === 'nudge'   && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#fff8ec', color: '#b85c00', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>↩ Nudge (no reply)</span>}
-              {activeDraft?.draftType === 'advance'  && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#efffef', color: '#1a6b1a', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>💬 Reply (advance)</span>}
-              <span style={{ fontWeight: 400, fontSize: '0.82rem', color: '#555', marginLeft: '0.5rem' }}>
+              {activeDraft?.draftType === 'nudge'   && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#f0f0f0', color: '#555', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>↩ Nudge (no reply)</span>}
+              {activeDraft?.draftType === 'advance'  && <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', background: '#f0f0f0', color: '#555', padding: '2px 7px', borderRadius: '10px', fontWeight: 400 }}>💬 Reply (advance)</span>}
+              <span style={{ fontWeight: 400, fontSize: '0.82rem', color: '#777', marginLeft: '0.5rem' }}>
                 — approve before sending
               </span>
             </div>
@@ -657,7 +657,7 @@ export default function PartnerDetail() {
             <input
               value={editedSubject}
               onChange={e => setEditedSubject(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.92rem', marginBottom: '0.875rem', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.92rem', marginBottom: '0.875rem', boxSizing: 'border-box', color: '#111' }}
             />
 
             <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem', color: '#444' }}>Email Body</label>
@@ -665,7 +665,7 @@ export default function PartnerDetail() {
               value={editedBody}
               onChange={e => setEditedBody(e.target.value)}
               rows={15}
-              style={{ width: '100%', padding: '0.6rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.88rem', lineHeight: '1.6', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', padding: '0.6rem', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.88rem', lineHeight: '1.6', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', color: '#111' }}
             />
 
             <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -676,7 +676,7 @@ export default function PartnerDetail() {
             </div>
 
             {emailStatus !== 'VALID' && (
-              <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#fff8ec', border: '1px solid #f0d080', borderRadius: '4px', fontSize: '0.83rem', color: '#7a4a00' }}>
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.83rem', color: '#555' }}>
                 ⚠️ Click "Check" above to validate the email address before sending.
               </div>
             )}
@@ -687,7 +687,7 @@ export default function PartnerDetail() {
                 disabled={!canSend}
                 style={{
                   padding: '0.6rem 1.4rem',
-                  background: canSend ? '#1a6b1a' : '#aaa',
+                  background: canSend ? '#000' : '#ccc',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
@@ -711,29 +711,29 @@ export default function PartnerDetail() {
       </div>
 
       {/* Message History */}
-      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem' }}>Message History</h2>
+      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem', color: '#000' }}>Message History</h2>
       {partner.messages.length === 0 ? (
         <p style={{ color: '#999', fontSize: '0.88rem' }}>No messages yet.</p>
       ) : (
         partner.messages.map(m => (
-          <div key={m.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: m.direction === 'OUTBOUND' ? '#f0f7ff' : '#f9f9f9', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.78rem', color: m.direction === 'OUTBOUND' ? '#1a56db' : '#666' }}>[{m.direction}]</span>{' '}
-            <span style={{ fontSize: '0.88rem' }}>{m.body.slice(0, 150)}{m.body.length > 150 ? '…' : ''}</span>
+          <div key={m.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: '#f9f9f9', border: '1px solid #e5e5e5', borderRadius: '4px' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.78rem', color: '#444' }}>[{m.direction}]</span>{' '}
+            <span style={{ fontSize: '0.88rem', color: '#222' }}>{m.body.slice(0, 150)}{m.body.length > 150 ? '…' : ''}</span>
             <span style={{ float: 'right', color: '#bbb', fontSize: '0.75rem' }}>{new Date(m.createdAt).toLocaleString()}</span>
           </div>
         ))
       )}
 
       {/* All Drafts */}
-      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem' }}>Draft History</h2>
+      <h2 style={{ marginTop: '2rem', fontSize: '1.05rem', color: '#000' }}>Draft History</h2>
       {partner.drafts.length === 0 ? (
         <p style={{ color: '#999', fontSize: '0.88rem' }}>No drafts.</p>
       ) : (
         partner.drafts.map(d => (
-          <div key={d.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: '4px', fontSize: '0.88rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.78rem', background: '#eee', padding: '1px 6px', borderRadius: '3px' }}>{d.category}</span>
+          <div key={d.id} style={{ marginBottom: '0.4rem', padding: '0.55rem 0.75rem', background: '#fff', border: '1px solid #e5e5e5', borderRadius: '4px', fontSize: '0.88rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.78rem', background: '#f0f0f0', color: '#555', padding: '1px 6px', borderRadius: '3px' }}>{d.category}</span>
             {d.subject && <span style={{ marginLeft: '0.5rem', color: '#333' }}>{d.subject}</span>}
-            <span style={{ marginLeft: '0.75rem', color: d.status === 'SENT' ? '#1a6b1a' : d.status === 'PENDING' ? '#b85c00' : '#999', fontSize: '0.8rem' }}>
+            <span style={{ marginLeft: '0.75rem', color: d.status === 'SENT' ? '#000' : d.status === 'PENDING' ? '#555' : '#999', fontSize: '0.8rem', fontWeight: d.status === 'SENT' ? 600 : 400 }}>
               {d.status}{d.sentAt ? ` · ${new Date(d.sentAt).toLocaleDateString()}` : ''}
             </span>
           </div>
@@ -741,9 +741,9 @@ export default function PartnerDetail() {
       )}
 
       {/* ── NEWS SECTION ── */}
-      <div style={{ marginTop: '2.5rem', borderTop: '2px solid #e8e8e8', paddingTop: '1.5rem' }}>
+      <div style={{ marginTop: '2.5rem', borderTop: '2px solid #e5e5e5', paddingTop: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem' }}>📰 Latest News</h2>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', color: '#000' }}>📰 Latest News</h2>
           <button
             onClick={loadNews}
             disabled={newsLoading}
@@ -776,7 +776,7 @@ export default function PartnerDetail() {
         )}
 
         {newsItems.length > 0 && (
-          <div style={{ border: '1px solid #e8e8e8', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
+          <div style={{ border: '1px solid #e5e5e5', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
             {newsItems.map((item, i) => (
               <a
                 key={i}
@@ -790,10 +790,10 @@ export default function PartnerDetail() {
                   textDecoration: 'none',
                   color: 'inherit',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f9f9fc')}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f9f9f9')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1a1a2e', lineHeight: '1.4', marginBottom: '0.2rem' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#111', lineHeight: '1.4', marginBottom: '0.2rem' }}>
                   {item.title}
                 </div>
                 {item.snippet && (
