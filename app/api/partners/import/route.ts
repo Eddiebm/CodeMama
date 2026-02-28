@@ -62,18 +62,18 @@ export async function POST(req: NextRequest) {
     let duplicates = 0;
 
     for (const row of rows) {
-      const name = row['investor_name'] || row['name'] || row['Name'] || row['Company'];
+      const name = row['investor_name'] || row['name'] || row['Name'] || row['Company'] || row['Company Name for Emails'];
       if (!name || name.toString().trim() === '') { skipped++; continue; }
 
       const normalizedName = name.toString().trim().toLowerCase();
       if (existingNames.has(normalizedName)) { duplicates++; continue; }
 
       const country = row['country'] || row['Country'] || row['region'] || row['Region'] || '';
-      const interest = row['indication_preference'] || row['sector'] || row['interest'] || row['Interest'] || '';
-      const firstName = row['contact_first_name'] || row['first_name'] || '';
-      const lastName = row['contact_last_name'] || row['last_name'] || '';
+      const interest = row['indication_preference'] || row['sector'] || row['interest'] || row['Interest'] || row['Industry'] || row['Keywords'] || '';
+      const firstName = row['contact_first_name'] || row['first_name'] || row['First Name'] || '';
+      const lastName = row['contact_last_name'] || row['last_name'] || row['Last Name'] || '';
       const contactEmail = row['contact_email'] || row['email'] || row['Email'] || '';
-      const contactTitle = row['contact_job_title'] || row['title'] || '';
+      const contactTitle = row['contact_job_title'] || row['title'] || row['Title'] || '';
       const contactName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
       // Track this name so duplicates within the same file are also caught
