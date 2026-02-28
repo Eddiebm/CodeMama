@@ -18,6 +18,7 @@ export default function Partners() {
   const [region, setRegion]             = useState('US');
   const [interest, setInterest]         = useState('');
   const [loading, setLoading]           = useState(false);
+  const [addError, setAddError]         = useState('');
   const [importing, setImporting]       = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [showAdd, setShowAdd]           = useState(false);
@@ -32,14 +33,20 @@ export default function Partners() {
   async function addPartner(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setAddError('');
     const res = await fetch('/api/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, region, interest }),
     });
-    const partner = await res.json();
-    setPartners(prev => [partner, ...prev]);
-    setName(''); setInterest(''); setLoading(false); setShowAdd(false);
+    const data = await res.json();
+    if (!res.ok) {
+      setAddError(data.error || 'Something went wrong.');
+      setLoading(false);
+      return;
+    }
+    setPartners(prev => [data, ...prev]);
+    setName(''); setInterest(''); setLoading(false); setShowAdd(false); setAddError('');
   }
 
   async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -127,19 +134,24 @@ export default function Partners() {
               <input value={interest} onChange={e => setInterest(e.target.value)} required placeholder="e.g. Oncology licensing"
                 style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box' }} />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <button type="submit" disabled={loading} style={{
                 padding: '0.6rem 1.25rem', background: '#1a1a2e', color: '#fff',
                 border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600,
               }}>
                 {loading ? 'Adding...' : 'Add'}
               </button>
-              <button type="button" onClick={() => setShowAdd(false)} style={{
+              <button type="button" onClick={() => { setShowAdd(false); setAddError(''); }} style={{
                 padding: '0.6rem 1rem', background: '#f3f4f6', color: '#666',
                 border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.88rem',
               }}>
                 Cancel
               </button>
+              {addError && (
+                <span style={{ fontSize: '0.83rem', color: '#c00', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  ⚠️ {addError}
+                </span>
+              )}
             </div>
           </form>
         )}
