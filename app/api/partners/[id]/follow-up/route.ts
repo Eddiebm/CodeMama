@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { generateFollowUpEmail, generateAdvanceEmail } from '@/lib/emailWriter';
+import { generateFollowUpEmail, generateAdvanceEmail, AccountContext } from '@/lib/emailWriter';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,14 +41,26 @@ export async function POST(
         contactTitle: true,
         contactEmail: true,
         drafts: {
-          where: { category: 'FOLLOW_UP', status: 'SENT' },
-          select: { id: true },
+          where: { status: 'SENT' },
+          select: { id: true, subject: true, sentAt: true, category: true },
+          orderBy: { sentAt: 'desc' },
         },
       },
     });
 
     if (!partner) return NextResponse.json({ error: 'Partner not found' }, { status: 404 });
     if (!partner.contactEmail) return NextResponse.json({ error: 'No contact email' }, { status: 400 });
+
+    const sentDrafts = partner.drafts.filter(d => d.sentAt);
+    const followUpDrafts = sentDrafts.filter(d => d.category === 'FOLLOW_UP');
+    const followUpNumber = followUpDrafts.length + 1;
+
+    // Account context for the BD Control Bundle
+    const account: AccountContext = {
+      previousOutreachCount: sentDrafts.length,
+      lastSentAt: sentDrafts[0]?.sentAt?.toISOString(),
+      previousSubjects: sentDrafts.slice(0, 5).map(d => d.subject ?? '').filter(Boolean),
+    };
 
     const ctx = {
       name: partner.name,
@@ -60,14 +72,13 @@ export async function POST(
     };
 
     let emailDraft;
-    const followUpNumber = partner.drafts.length + 1;
 
     if (type === 'advance') {
       const responseNote = (body.responseNote || '').trim() || 'They expressed interest in learning more.';
-      emailDraft = await generateAdvanceEmail(ctx, responseNote);
+      emailDraft = await generateAdvanceEmail(ctx, responseNote, account);
     } else {
       const daysSince: number = body.daysSince ?? 7;
-      emailDraft = await generateFollowUpEmail(ctx, daysSince, followUpNumber);
+      emailDraft = await generateFollowUpEmail(ctx, daysSince, followUpNumber, account);
     }
 
     const draft = await db.draft.create({

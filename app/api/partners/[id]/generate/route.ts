@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { researchCompany } from '@/lib/researcher';
-import { generateOutreachEmail } from '@/lib/emailWriter';
+import { generateOutreachEmail, AccountContext } from '@/lib/emailWriter';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,15 +10,33 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const partner = await db.partner.findUnique({ where: { id: params.id } });
+    const partner = await db.partner.findUnique({
+      where: { id: params.id },
+      include: {
+        drafts: {
+          where: { status: 'SENT' },
+          select: { subject: true, sentAt: true },
+          orderBy: { sentAt: 'desc' },
+        },
+      },
+    });
+
     if (!partner) {
       return NextResponse.json({ error: 'Partner not found' }, { status: 404 });
     }
 
-    // Research the company (non-blocking, best-effort)
+    // Build account context for the BD Control Bundle
+    const sentDrafts = partner.drafts.filter(d => d.sentAt);
+    const account: AccountContext = {
+      previousOutreachCount: sentDrafts.length,
+      lastSentAt: sentDrafts[0]?.sentAt?.toISOString(),
+      previousSubjects: sentDrafts.slice(0, 5).map(d => d.subject ?? '').filter(Boolean),
+    };
+
+    // Research the company (best-effort)
     const researchContext = await researchCompany(partner.name);
 
-    // Generate personalized email via Claude
+    // Generate via the BD Control Bundle
     const { subject, body } = await generateOutreachEmail(
       {
         name: partner.name,
@@ -28,10 +46,10 @@ export async function POST(
         contactName: partner.contactName,
         contactTitle: partner.contactTitle,
       },
-      researchContext
+      researchContext,
+      account,
     );
 
-    // Save as a PENDING draft
     const draft = await db.draft.create({
       data: {
         partnerId: partner.id,
