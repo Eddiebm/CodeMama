@@ -241,7 +241,7 @@ function buildUserPrompt(
     : '';
 
   const researchNote = extras.researchContext
-    ? `\nPartner research (use selectively — do not reproduce verbatim):\n${extras.researchContext}`
+    ? `\nPartner research — use ONLY to substantiate the fit hypothesis, never to demonstrate homework:\n${extras.researchContext}`
     : '';
 
   const approvedAnchor = extras.introTemplate
@@ -256,9 +256,11 @@ TASK: Write the initial outreach email.
 
 FORMAT RULES:
 - 3–4 tight paragraphs, no bullet points
-- Open with clinical urgency or unmet need — NOT "I hope this finds you well"
-- Reference the recipient's therapeutic focus to show you've done your homework
+- LEAD with a clear, specific hypothesis for why THIS company is a plausible fit RIGHT NOW — based on their therapeutic focus, portfolio stage, or strategic position
+- That fit hypothesis is the reason for the email. It comes first. Everything else supports it.
+- Include at most ONE research detail — only if it directly substantiates the fit hypothesis. Never include a research detail to demonstrate effort or homework.
 - Include at most ONE clinical fact and at most ONE market/strategic fact
+- Do NOT open with "I hope this finds you well" or any generic pleasantry
 - Close with a specific, low-friction ask (a 20-minute call)
 - Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
 ${approvedAnchor}
@@ -321,21 +323,26 @@ MANDATORY BEFORE OUTPUTTING:
 
 STEP 1 — SILENT PRE-WRITE REASONING (do not display):
 - Classify the recipient: pharma BD / biotech executive / strategic investor / regional partner
-- Determine why they would plausibly care about late-line HGSOC
+- State in one sentence the specific fit hypothesis: why is THIS company a plausible partner RIGHT NOW?
+- Identify whether any single research detail substantiates that hypothesis — if not, omit all research
 - Select exactly ONE clinical fact (if initial) and at most ONE market fact
 - Decide which sentence signals seniority and which invites response without pitching
 
 STEP 2 — DRAFT the email following all rules above.
 
 STEP 3 — QUALITY GATE (internal review — FAIL = rewrite):
-FAIL immediately if the draft contains:
-- Promotional adjectives (exciting, breakthrough, transformative, revolutionary)
-- Mechanistic explanations beyond high-level framing
-- Implied claims of efficacy, safety, or competitive superiority
-- Language that sounds like a pitch or fundraising rather than a senior BD invitation
-- Any content from the forbidden list
+FAIL immediately if the draft:
+- Does not open with a specific, credible fit hypothesis for this recipient
+- Includes a research detail that exists to show homework rather than substantiate fit
+- Contains promotional adjectives (exciting, breakthrough, transformative, revolutionary)
+- Contains mechanistic explanations beyond high-level framing
+- Makes implied claims of efficacy, safety, or competitive superiority
+- Sounds like a pitch or fundraising rather than a senior BD invitation
+- Contains any content from the forbidden list
 
 PASS only if:
+- The opening clearly states why this specific company is a plausible fit right now
+- Any research detail present is there solely to support that fit hypothesis
 - Tone reflects 20+ years of senior pharmaceutical BD experience
 - Language acknowledges clinical and commercial reality
 - Email invites discussion rather than demands interest
