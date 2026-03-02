@@ -132,6 +132,16 @@ NON-NEGOTIABLE COMPLIANCE — regardless of recipient, NEVER include:
 - Language that sounds like fundraising or sales outreach
 
 Also forbidden: ${cfg.forbiddenTopics}
+
+FACTUAL INTEGRITY — ABSOLUTE RULE:
+You may ONLY reference facts that are explicitly stated in the Program Context provided to you.
+Do NOT infer, assume, extrapolate, or invent ANY details about:
+- The program's mechanism of action or compound type (e.g. do NOT say "small molecule", "antibody", "ADC" unless explicitly stated)
+- The program's clinical or preclinical data
+- The company's partnerships, funding, or history
+- Any outcomes, results, or timelines not explicitly given
+
+If a detail is not in the Program Context, omit it entirely. Do not fill gaps with plausible-sounding information.
 `.trim();
 
   // ── China overlay (sections 6–10) ───────────────────────────────────────
@@ -332,6 +342,7 @@ STEP 2 — DRAFT the email following all rules above.
 
 STEP 3 — QUALITY GATE (internal review — FAIL = rewrite):
 FAIL immediately if the draft:
+- Contains ANY factual claim about the program not explicitly stated in the Program Context (mechanism type, compound class, data, outcomes, history — if not given, do not invent it)
 - Does not open with a specific, credible fit hypothesis for this recipient
 - Includes a research detail that exists to show homework rather than substantiate fit
 - Contains promotional adjectives (exciting, breakthrough, transformative, revolutionary)
