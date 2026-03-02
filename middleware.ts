@@ -5,14 +5,15 @@ const PUBLIC_PATHS = ['/login', '/api/auth/login'];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Check session cookie
+  const sessionToken = process.env.SESSION_SECRET;
   const session = req.cookies.get('gpce_session');
-  if (!session || session.value !== 'authenticated') {
+
+  // If SESSION_SECRET isn't set or cookie doesn't match, reject
+  if (!sessionToken || !session || session.value !== sessionToken) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.search = '';
