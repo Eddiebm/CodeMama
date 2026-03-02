@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { draftId, includeDeck = false } = await req.json();
+    const { draftId, includeDeck = false, subject: editedSubject, body: editedBody } = await req.json();
 
     if (!draftId) {
       return NextResponse.json({ error: 'draftId is required' }, { status: 400 });
@@ -36,19 +36,21 @@ export async function POST(
       return NextResponse.json({ error: 'Email already sent' }, { status: 409 });
     }
 
-    // Send the email
-    const subject = draft.subject || `Introduction: COARE Holdings`;
+    // Use edited content if provided by the user, otherwise fall back to stored draft
+    const finalSubject = (editedSubject && editedSubject.trim()) ? editedSubject.trim() : (draft.subject || 'Introduction: COARE Holdings');
+    const finalBody    = (editedBody    && editedBody.trim())    ? editedBody.trim()    : draft.body;
+
     const result = await sendOutreachEmail({
       to: partner.contactEmail,
-      subject,
-      body: draft.body,
+      subject: finalSubject,
+      body: finalBody,
       includeDeck,
     });
 
-    // Mark draft as SENT
+    // Mark draft as SENT and persist the final (possibly edited) content
     await db.draft.update({
       where: { id: draftId },
-      data: { status: 'SENT', sentAt: new Date(), reviewedAt: new Date() },
+      data: { status: 'SENT', sentAt: new Date(), reviewedAt: new Date(), subject: finalSubject, body: finalBody },
     });
 
     // Log outbound message

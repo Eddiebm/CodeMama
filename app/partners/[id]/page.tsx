@@ -180,7 +180,7 @@ export default function PartnerDetail() {
       const res = await fetch(`/api/partners/${id}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draftId: activeDraft.draftId, includeDeck }),
+        body: JSON.stringify({ draftId: activeDraft.draftId, includeDeck, subject: editedSubject, body: editedBody }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Send failed');
