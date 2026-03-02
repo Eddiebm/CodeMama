@@ -53,9 +53,9 @@ export async function POST(
       data: { status: 'SENT', sentAt: new Date(), reviewedAt: new Date(), subject: finalSubject, body: finalBody },
     });
 
-    // Log outbound message
+    // Log outbound message (use finalBody so history matches what was actually sent)
     await db.message.create({
-      data: { partnerId: partner.id, direction: 'OUTBOUND', body: draft.body },
+      data: { partnerId: partner.id, direction: 'OUTBOUND', body: finalBody },
     });
 
     // Update partner status
