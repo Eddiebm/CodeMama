@@ -20,3 +20,7 @@ data/*.csv
 
 # OS files
 .DS_Store
+.vercel
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
