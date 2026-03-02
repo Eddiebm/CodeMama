@@ -61,3 +61,8 @@ model EmailValidation {
   checkedAt DateTime @default(now())
   Partner   Partner  @relation(fields: [partnerId], references: [id])
 }
+
+model Setting {
+  key   String @id
+  value String
+}

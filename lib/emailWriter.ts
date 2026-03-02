@@ -1,7 +1,6 @@
 import { getAI } from './ai';
 import { LANGUAGE } from './language';
-import fs from 'fs';
-import path from 'path';
+import { db } from './db';
 
 type Region = keyof typeof LANGUAGE;
 const VALID_REGIONS: Region[] = ['US', 'EU', 'CN'];
@@ -29,29 +28,30 @@ export interface ProgramConfig {
   investorMilestones: string;
 }
 
-export function loadProgramConfig(): ProgramConfig {
-  const configPath = path.join(process.cwd(), 'data', 'program.json');
+const DEFAULT_CONFIG: ProgramConfig = {
+  company: 'COARE Holdings',
+  sender: 'Eddie Bannerman-Menson',
+  senderTitle: 'Executive Vice President, Business Development',
+  indication: 'High-Grade Serous Ovarian Cancer (HGSOC)',
+  stage: 'Preclinical',
+  programType: 'Combination therapy',
+  emailScope: 'We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program.',
+  goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
+  forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy',
+  clinicalContext: 'Approximately 80% of women with HGSOC will relapse following first-line therapy. Median survival after platinum-resistant relapse remains under 12 months.',
+  marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
+  partnerHook: 'Where the partner has an oncology program, reference strategic alignment.',
+  investorPitch: 'COARE represents a capital-efficient preclinical opportunity in a high-value indication with validated biology and clear commercial precedents.',
+  investorMarketHook: 'With the global ovarian cancer market projected to exceed $3B by 2030, acquirers are actively seeking differentiated preclinical programs.',
+  investorMilestones: 'Key near-term value inflection points include IND-enabling studies and first-in-human readouts.',
+};
+
+export async function loadProgramConfig(): Promise<ProgramConfig> {
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  } catch {
-    return {
-      company: 'COARE Holdings',
-      sender: 'Eddie Bannerman-Menson',
-      senderTitle: 'Executive Vice President, Business Development',
-      indication: 'High-Grade Serous Ovarian Cancer (HGSOC)',
-      stage: 'Preclinical',
-      programType: 'Combination therapy',
-      emailScope: 'We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program.',
-      goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
-      forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy',
-      clinicalContext: 'Approximately 80% of women with HGSOC will relapse following first-line therapy. Median survival after platinum-resistant relapse remains under 12 months.',
-      marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
-      partnerHook: 'Where the partner has an oncology program, reference strategic alignment.',
-      investorPitch: 'COARE represents a capital-efficient preclinical opportunity in a high-value indication with validated biology and clear commercial precedents.',
-      investorMarketHook: 'With the global ovarian cancer market projected to exceed $3B by 2030, acquirers are actively seeking differentiated preclinical programs.',
-      investorMilestones: 'Key near-term value inflection points include IND-enabling studies and first-in-human readouts.',
-    };
-  }
+    const row = await db.setting.findUnique({ where: { key: 'program_config' } });
+    if (row) return { ...DEFAULT_CONFIG, ...JSON.parse(row.value) };
+  } catch { /* fall through to default */ }
+  return DEFAULT_CONFIG;
 }
 
 export interface PartnerContext {
@@ -411,7 +411,7 @@ export async function generateOutreachEmail(
   researchContext: string,
   account: AccountContext = { previousOutreachCount: 0 },
 ): Promise<EmailDraft> {
-  const cfg    = loadProgramConfig();
+  const cfg    = await loadProgramConfig();
   const region = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
@@ -434,7 +434,7 @@ export async function generateFollowUpEmail(
   followUpNumber: number,
   account: AccountContext = { previousOutreachCount: 1 },
 ): Promise<EmailDraft> {
-  const cfg    = loadProgramConfig();
+  const cfg    = await loadProgramConfig();
   const region = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
@@ -457,7 +457,7 @@ export async function generateAdvanceEmail(
   responseNote: string,
   account: AccountContext = { previousOutreachCount: 1 },
 ): Promise<EmailDraft> {
-  const cfg    = loadProgramConfig();
+  const cfg    = await loadProgramConfig();
   const region = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
