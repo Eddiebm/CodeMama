@@ -35,15 +35,15 @@ const DEFAULT_CONFIG: ProgramConfig = {
   indication: 'High-Grade Serous Ovarian Cancer (HGSOC)',
   stage: 'Preclinical',
   programType: 'Combination therapy',
-  emailScope: 'We are reaching out to introduce COARE Holdings and a preclinical HGSOC combination program.',
+  emailScope: 'Introduce COARE Holdings and a preclinical HGSOC combination program to strategic partners.',
   goalDescription: 'Identify potential licensing, co-development, or partnership discussions',
-  forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, IND timelines, regulatory strategy',
+  forbiddenTopics: 'pricing, valuation, deal terms, safety data, toxicity, efficacy comparisons, regulatory strategy',
   clinicalContext: 'Approximately 80% of women with HGSOC will relapse following first-line therapy. Median survival after platinum-resistant relapse remains under 12 months.',
   marketContext: 'HGSOC accounts for ~314,000 new diagnoses globally each year. The global ovarian cancer therapeutics market is projected to exceed $3B by 2030.',
   partnerHook: 'Where the partner has an oncology program, reference strategic alignment.',
   investorPitch: 'COARE represents a capital-efficient preclinical opportunity in a high-value indication with validated biology and clear commercial precedents.',
   investorMarketHook: 'With the global ovarian cancer market projected to exceed $3B by 2030, acquirers are actively seeking differentiated preclinical programs.',
-  investorMilestones: 'Key near-term value inflection points include IND-enabling studies and first-in-human readouts.',
+  investorMilestones: 'Key near-term value inflection points include advancing IND-enabling studies and first-in-human readouts.',
 };
 
 export async function loadProgramConfig(): Promise<ProgramConfig> {
@@ -86,7 +86,7 @@ function buildGreeting(partner: PartnerContext, region: Region): string {
   return `Dear ${parts[0]},`;
 }
 
-// ── SYSTEM PROMPT: Global BD Control Bundle role + overlays ─────────────────
+// ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(
   cfg: ProgramConfig,
@@ -97,7 +97,7 @@ function buildSystemPrompt(
   const isCN       = region === 'CN';
   const isInvestor = partnerType === 'INVESTOR';
 
-  // ── 0. Global role ──────────────────────────────────────────────────────
+  // ── 1. Global role ──────────────────────────────────────────────────────
   const globalRole = `
 You are acting as a senior pharmaceutical business development executive with 20+ years of experience in oncology licensing, co-development, and M&A.
 
@@ -118,93 +118,139 @@ You:
 You are writing on behalf of: ${cfg.sender}, ${cfg.senderTitle}, ${cfg.company}.
 `.trim();
 
-  // ── 5. Non-negotiable compliance ────────────────────────────────────────
-  const compliance = `
-NON-NEGOTIABLE COMPLIANCE — regardless of recipient, NEVER include:
-- Pricing or reimbursement
-- Valuation or deal terms
-- Safety, toxicity, or comparative efficacy data
-- IND timelines or regulatory strategy
-- Clinical projections or probability statements
-- Promotional adjectives: exciting, breakthrough, transformative, revolutionary, game-changing
-- Mechanistic explanations beyond high-level framing
-- Any implied claims of superiority, efficacy, or outcomes
-- Language that sounds like fundraising or sales outreach
+  // ── 2. Banned phrases (auto-reject) ─────────────────────────────────────
+  const bannedPhrases = `
+BANNED PHRASES — AUTO-REJECT if any of the following appear in the draft. Rewrite immediately.
 
-Also forbidden: ${cfg.forbiddenTopics}
+Opening phrases (banned):
+- "We are reaching out"
+- "We wanted to introduce"
+- "We believe this may be of interest"
+- "I am writing to"
+- "I hope this email finds you"
+- "I hope this finds you well"
 
+Promotional language (banned):
+- "Exciting" / "exciting opportunity"
+- "Innovative" / "innovation" (as a marketing claim)
+- "Revolutionary" / "revolutionizing"
+- "Groundbreaking"
+- "Transformative"
+- "Breakthrough" (as a standalone adjective)
+- "Game-changing"
+
+Zero tolerance: if any banned phrase appears anywhere in the email body or subject → discard and rewrite from scratch.
+`.trim();
+
+  // ── 3. Required content blocks ──────────────────────────────────────────
+  const requiredBlocks = `
+REQUIRED CONTENT BLOCKS — all four must be present in the final draft:
+
+A. POSITIONING SENTENCE
+   Must include at least one of: resistance-focused / combination-engineered / mechanism-driven / platform
+   This is the strategic framing of why the program is relevant.
+
+B. DIFFERENTIATION SENTENCE
+   Must include at least one of: limited competition / lack of durable options / persistent unmet need / resistance biology
+   This establishes why the disease setting remains unresolved.
+
+C. MOMENTUM SIGNAL
+   Must include at least one phrase from Category A or B:
+   Category A (program milestones — factual, confirmed in-progress):
+     "advancing IND-enabling" / "next development phase"
+   Category B (process signal — always valid, projects structure and selectivity):
+     "structured evaluation process" / "select group of strategic partners"
+
+D. CONTROLLED CLOSE
+   Must use language similar to:
+   "If aligned, we would welcome a brief discussion to determine whether deeper diligence is warranted."
+   (Exact wording may vary; tone must be confident, non-pressuring, and reciprocal.)
+
+If any block is absent → rewrite until all four are present.
+`.trim();
+
+  // ── 4. Factual integrity ─────────────────────────────────────────────────
+  const factualIntegrity = `
 FACTUAL INTEGRITY — ABSOLUTE RULE:
-You may ONLY reference facts that are explicitly stated in the Program Context provided to you.
+You may ONLY reference facts explicitly stated in the Program Context provided to you.
 Do NOT infer, assume, extrapolate, or invent ANY details about:
-- The program's mechanism of action or compound type (e.g. do NOT say "small molecule", "antibody", "ADC" unless explicitly stated)
+- The program's mechanism of action or compound type (do NOT say "small molecule", "antibody", "ADC" unless explicitly stated)
 - The program's clinical or preclinical data
 - The company's partnerships, funding, or history
 - Any outcomes, results, or timelines not explicitly given
 
+Also forbidden: ${cfg.forbiddenTopics}
+
 If a detail is not in the Program Context, omit it entirely. Do not fill gaps with plausible-sounding information.
 `.trim();
 
-  // ── China overlay (sections 6–10) ───────────────────────────────────────
+  // ── 5. Word count rule ───────────────────────────────────────────────────
+  const wordCountRule = `
+WORD COUNT RULE (body text only — excluding greeting and sign-off):
+- INVESTOR recipients: 150–180 words. Outside this range → rewrite.
+- PHARMA / BIOTECH recipients: maximum 220 words. Above limit → trim and rewrite.
+
+Count words carefully before outputting. Compliance is mandatory.
+`.trim();
+
+  // ── 6. China overlay ─────────────────────────────────────────────────────
   const chinaOverlay = isCN ? `
-CHINA / GREATER CHINA REGIONAL OVERLAY — applies because recipient region is CN:
+CHINA / GREATER CHINA REGIONAL OVERLAY:
 
 TONE: Direct, serious, respectful of hierarchy. No idioms, humor, or rhetorical flourishes. Professional neutrality throughout.
 
 CONTENT EMPHASIS:
-- Emphasize: large patient populations, unmet need, late-line disease settings, combination strategies, regional co-development potential, alignment with existing oncology franchises
-- De-emphasize: founder narratives, speculative innovation language, Western venture-style enthusiasm
+- Emphasize: long-term collaboration, large patient populations, unmet need in late-line settings, combination strategies, co-development potential, alignment with oncology franchises
+- De-emphasize: founder narratives, speculative innovation language, Western venture-style enthusiasm, aggressive scarcity framing
 
-LANGUAGE: Use "strategic alignment", "regional development interest", "shared focus on execution".
-Do NOT reference: deal terms, regulatory shortcuts, geopolitical dynamics, comparisons between markets.
+LANGUAGE: Use "strategic alignment", "long-term collaboration", "regional co-development potential", "shared focus on execution".
+Do NOT reference: deal terms, regulatory shortcuts, geopolitical dynamics, competitive dominance language.
 
 ADDRESS: By family name with title (e.g., "Dear Director Chen"). Never first name alone. If title unknown: "Dear Colleague".
-PATIENCE: One email is not enough. Acknowledge this respectfully. Never pressure or rush.
 
 PREFERRED CLOSING: "We would welcome the opportunity to explore whether there is strategic alignment for discussion."
 
-ADDITIONAL PROHIBITIONS (China): No informal language, no over-personalisation, no accelerated approval path suggestions, no national competition references.
+ADDITIONAL PROHIBITIONS: No informal language, no over-personalisation, no accelerated approval path suggestions, no high-pressure urgency.
 `.trim() : '';
 
-  // ── Pharma/Biotech overlay (sections 17–19) ─────────────────────────────
+  // ── 7. Pharma / Biotech overlay ──────────────────────────────────────────
   const pharmaOverlay = !isInvestor ? `
 PHARMA / BIOTECH PARTNER OVERLAY:
 
-TONE: Clinically literate, commercially realistic, respectful of internal diligence processes.
-Assume the recipient manages multiple assets, is sensitive to development risk, and values clarity over novelty.
+TONE: Clinically literate, commercially realistic, peer-level BD. Assume the recipient manages multiple assets, is sensitive to development risk, and values clarity over novelty.
 
-CONTENT EMPHASIS:
-- Where standard of care has reached a ceiling
-- Why late-line HGSOC remains unresolved despite existing approvals
-- Combination strategies as complementary, not disruptive
-- Clear adjacency to existing oncology franchises
+REQUIRED KEYWORD SIGNALS — at least one from each:
+- Portfolio signal: "portfolio alignment" / "portfolio adjacency" / "oncology franchise"
+- Combination rationale: combination approach framed against a clinical or mechanistic gap
+- Differentiation: "mechanistic differentiation" / resistance biology / ceiling of standard of care
+- Adjacency: explicit reference to how this fits their existing pipeline or therapeutic focus
 
-SIGNAL LANGUAGE: "portfolio adjacency", "downstream of current standards", "disciplined combination strategy", "aligned with late-line development realities"
+PROHIBITED: capital efficiency framing, exit language, fundraising tone, academic mechanistic explanations.
 
 PREFERRED CLOSING: "We would welcome a brief discussion to explore whether there is strategic or portfolio alignment."
 `.trim() : '';
 
-  // ── Investor overlay (sections 20–22) ───────────────────────────────────
+  // ── 8. Investor overlay ──────────────────────────────────────────────────
   const investorOverlay = isInvestor ? `
 INVESTOR OVERLAY — recipient is a VC, growth equity, family office, or strategic investor:
 
-TONE: Rational, risk-aware, confident but restrained. Speak in terms of portfolio fit, capital efficiency, value inflection points, and strategic M&A backdrop.
-Assume they have seen many preclinical oncology programs and value credible exit pathways over vision alone.
+TONE: Rational, risk-aware, confident but restrained. Speak in terms of portfolio fit, capital efficiency, value inflection points, and strategic M&A backdrop. Assume they have seen many preclinical oncology programs and value credible exit pathways over vision alone.
 
-CONTENT EMPHASIS:
-- Capital efficiency in preclinical development
-- Validated disease area with persistent unmet need
-- Combination approach as a de-risking strategy
-- Clearly defined value inflection points (IND-enabling, first-in-human)
+REQUIRED KEYWORD SIGNALS — at least one from each:
+- Capital signal: "capital-efficient" / "capital efficiency"
+- Inflection: "defined inflection point" / "value inflection" / "IND-enabling"
+- Exit context: "strategic acquirer" / "strategic M&A" / "exit"
+- Indication gravity: "high-mortality" / "high unmet need" / persistent late-line mortality framing
 
 MARKET CONTEXT (use selectively): ${cfg.investorMarketHook}
 MILESTONES (frame near-term catalysts): ${cfg.investorMilestones}
 
-Do NOT discuss: valuations, exit timing promises, comparative deal examples.
+PROHIBITED: detailed mechanistic explanations, academic tone, regulatory detail, valuations, exit timing promises, comparative deal examples, fundraising tone.
 
 PREFERRED CLOSING: "We would welcome an initial discussion to assess mutual interest and strategic fit."
 `.trim() : '';
 
-  // ── Account context (section 10–16) ─────────────────────────────────────
+  // ── 9. Account context ───────────────────────────────────────────────────
   const accountCtx = account.previousOutreachCount > 0 ? `
 ACCOUNT CONTEXT — this company has been contacted before:
 - Total prior outreach emails sent: ${account.previousOutreachCount}
@@ -214,17 +260,15 @@ ${account.previousSubjects?.length ? `- Prior subject lines used: ${account.prev
 ACCOUNT DISCIPLINE:
 - No two emails to the same company may share more than 50% overlapping phrasing
 - Do not repeat the same hook, opening, or closing as previous emails
-- This is a follow-up or continuation — adjust tone to reflect the relationship stage
+- Adjust tone to reflect the relationship stage
 `.trim() : '';
 
-  const parts = [globalRole, compliance, chinaOverlay, pharmaOverlay, investorOverlay, accountCtx]
+  return [globalRole, bannedPhrases, requiredBlocks, factualIntegrity, wordCountRule, chinaOverlay, pharmaOverlay, investorOverlay, accountCtx]
     .filter(Boolean)
     .join('\n\n---\n\n');
-
-  return parts;
 }
 
-// ── USER PROMPT: context + drafting + quality gate + seniority check ─────────
+// ── USER PROMPT ───────────────────────────────────────────────────────────────
 
 function buildUserPrompt(
   cfg: ProgramConfig,
@@ -237,7 +281,6 @@ function buildUserPrompt(
     daysSince?: number;
     followUpNumber?: number;
     responseNote?: string;
-    introTemplate?: string;
     followUpTemplate?: string;
   }
 ): string {
@@ -245,6 +288,7 @@ function buildUserPrompt(
   const audienceType = isInvestor
     ? 'venture capital / investment firm'
     : `${partner.partnerType.toLowerCase()} company`;
+  const wordLimit = isInvestor ? '150–180 words' : 'maximum 220 words';
 
   const seniorityNote = partner.contactTitle
     ? `Recipient title: "${partner.contactTitle}" — write peer-to-peer at that seniority level.`
@@ -254,26 +298,39 @@ function buildUserPrompt(
     ? `\nPartner research — use ONLY to substantiate the fit hypothesis, never to demonstrate homework:\n${extras.researchContext}`
     : '';
 
-  const approvedAnchor = extras.introTemplate
-    ? `\nApproved opening language anchor: "${extras.introTemplate}"`
-    : '';
-
   // Mode-specific instructions
   let modeInstructions = '';
+
   if (mode === 'initial') {
     modeInstructions = `
 TASK: Write the initial outreach email.
 
+MANDATORY 4-PARAGRAPH STRUCTURE — no exceptions:
+¶1 — Strategic positioning + alignment
+   Open directly with WHY this specific company is a plausible fit RIGHT NOW.
+   State the fit hypothesis in the first sentence. No pleasantries. No preamble.
+   Base it on their therapeutic focus, portfolio stage, or strategic position.
+
+¶2 — Differentiation + resistance thesis
+   Establish the unmet need in HGSOC specifically: where existing options fall short,
+   why late-line disease settings remain unresolved, and how the combination approach
+   addresses that gap. One clinical fact maximum.
+
+¶3 — Momentum + value inflection
+   Signal a structured, selective evaluation process.
+   Must include at least one momentum phrase (Category A or B from required blocks).
+   One market or strategic fact maximum.
+
+¶4 — Controlled, confident close
+   Low-friction ask — a brief call to assess fit.
+   Must use language in the spirit of:
+   "If aligned, we would welcome a brief discussion to determine whether deeper diligence is warranted."
+
 FORMAT RULES:
-- 3–4 tight paragraphs, no bullet points
-- LEAD with a clear, specific hypothesis for why THIS company is a plausible fit RIGHT NOW — based on their therapeutic focus, portfolio stage, or strategic position
-- That fit hypothesis is the reason for the email. It comes first. Everything else supports it.
-- Include at most ONE research detail — only if it directly substantiates the fit hypothesis. Never include a research detail to demonstrate effort or homework.
-- Include at most ONE clinical fact and at most ONE market/strategic fact
-- Do NOT open with "I hope this finds you well" or any generic pleasantry
-- Close with a specific, low-friction ask (a 20-minute call)
+- Exactly 4 paragraphs. No bullet points. No sub-headers.
+- ${wordLimit} (body text, excluding greeting and sign-off)
+- Do NOT open with any banned phrase
 - Region tone: US = direct/collegial; EU = measured/formal; CN = respectful/relationship-first
-${approvedAnchor}
 
 PROGRAM CONTEXT:
 - Indication: ${cfg.indication}
@@ -287,22 +344,22 @@ PROGRAM CONTEXT:
 
   if (mode === 'nudge') {
     const cnNote = region === 'CN'
-      ? '\nFor this Chinese recipient: be especially patient and respectful. Do not pressure. Frame as maintaining respectful contact, not chasing. Subject line should be soft and non-presumptuous.'
+      ? '\nFor this Chinese recipient: be especially patient and respectful. Do not pressure. Frame as maintaining respectful contact. Subject line must be soft and non-presumptuous.'
       : '';
     modeInstructions = `
 TASK: Write a NUDGE / FOLLOW-UP email. They have NOT responded. This is follow-up #${extras.followUpNumber ?? 1}. It has been ${extras.daysSince ?? 7} days since the last email.
 
 FORMAT RULES:
 - 2–3 short paragraphs MAXIMUM — shorter than the original
-- Do NOT start with "I hope this email finds you well"
 - Open by acknowledging they are busy and may have missed the note — gracious, not passive-aggressive
 - Reference the prior outreach in ONE sentence only. Do not repeat the full pitch.
 - Restate ONLY the single most compelling hook — one clinical or strategic point
-- Close with an ultra low-friction ask — softer than before ("even a 15-minute exchange when convenient")
+- Close with an ultra low-friction ask — softer than the original ("even a 15-minute exchange when convenient")
 - Subject line must start with "Re: " and be softer than the original
 - Tone: US = brief, direct; EU = measured, gracious; CN = highly respectful, patient, no pressure
+- Do NOT use any banned phrase
 ${cnNote}
-${extras.followUpTemplate ? `Approved follow-up language anchor: "${extras.followUpTemplate}"` : ''}
+${extras.followUpTemplate ? `Follow-up language anchor (adapt, do not copy verbatim): "${extras.followUpTemplate}"` : ''}
 `.trim();
   }
 
@@ -323,45 +380,57 @@ FORMAT RULES:
 - Propose a specific next step: a call with 2 suggested time windows, or offer to share materials
 - Subject line starts with "Re: " to thread the conversation
 - Tone: US = warm, direct; EU = measured, professional; CN = respectful, grateful, flexible on timing
+- Do NOT use any banned phrase
 ${cnNote}
 `.trim();
   }
 
-  // Quality gate + seniority scoring (sections 3–4) — mandatory before output
+  // Quality gate — mandatory before output
   const qualityGate = `
 MANDATORY BEFORE OUTPUTTING:
 
 STEP 1 — SILENT PRE-WRITE REASONING (do not display):
 - Classify the recipient: pharma BD / biotech executive / strategic investor / regional partner
 - State in one sentence the specific fit hypothesis: why is THIS company a plausible partner RIGHT NOW?
-- Identify whether any single research detail substantiates that hypothesis — if not, omit all research
-- Select exactly ONE clinical fact (if initial) and at most ONE market fact
-- Decide which sentence signals seniority and which invites response without pitching
+- Identify whether any research detail substantiates that hypothesis — if not, omit all research
+- Confirm the 4-paragraph structure and word count plan before drafting
 
 STEP 2 — DRAFT the email following all rules above.
 
-STEP 3 — QUALITY GATE (internal review — FAIL = rewrite):
+STEP 3 — QUALITY GATE (internal review — FAIL = rewrite from scratch):
 FAIL immediately if the draft:
-- Contains ANY factual claim about the program not explicitly stated in the Program Context (mechanism type, compound class, data, outcomes, history — if not given, do not invent it)
+- Contains ANY banned phrase from the banned phrase list
+- Is missing any of required blocks A, B, C, or D
+- Exceeds word count limit or (for INVESTOR) falls below minimum
+- Contains ANY factual claim about the program not explicitly stated in the Program Context
 - Does not open with a specific, credible fit hypothesis for this recipient
-- Includes a research detail that exists to show homework rather than substantiate fit
-- Contains promotional adjectives (exciting, breakthrough, transformative, revolutionary)
+- Contains a research detail that exists to show homework rather than substantiate fit
+- Uses more than 4 paragraphs or uses bullet points or sub-headers
+- Sounds like a pitch, fundraising email, or unsolicited sales contact
 - Contains mechanistic explanations beyond high-level framing
 - Makes implied claims of efficacy, safety, or competitive superiority
-- Sounds like a pitch or fundraising rather than a senior BD invitation
-- Contains any content from the forbidden list
 
 PASS only if:
-- The opening clearly states why this specific company is a plausible fit right now
-- Any research detail present is there solely to support that fit hypothesis
+- No banned phrase appears anywhere
+- All four required blocks (A, B, C, D) are present
+- Word count is within permitted range
+- Opening states a specific, credible fit hypothesis for this recipient
 - Tone reflects 20+ years of senior pharmaceutical BD experience
-- Language acknowledges clinical and commercial reality
 - Email invites discussion rather than demands interest
-- Sender sounds credible to a board member or licensing head
 
-If FAIL: rewrite until PASS criteria are met.
+If FAIL: rewrite until all PASS criteria are met.
 
-STEP 4 — SENIORITY SCORE: Rate the final email 0.0–1.0 for how strongly it sounds like a 20-year pharma BD veteran wrote it. If below 0.90, revise until it reaches 0.90.
+STEP 4 — SELF-SCORING (5 dimensions, 1–10 each, internal only — do not display):
+1. Senior tone — sounds like a 20-year pharma BD veteran, not a sales rep
+2. Strategic clarity — fit hypothesis is specific and credible, not generic
+3. Differentiation strength — resistance/unmet need framing is precise
+4. Momentum signal — projects confidence and structured selectivity
+5. Audience alignment — every element tuned to this specific recipient type
+
+Rules:
+- Any single score < 8 → rewrite that section
+- Average score < 9 → rewrite entire draft
+Only proceed to STEP 5 when all scores ≥ 8 and average ≥ 9.
 
 STEP 5 — OUTPUT: Return ONLY valid JSON with the final passing email:
 {"subject": "...", "body": "..."}
@@ -385,7 +454,7 @@ ${qualityGate}
 `.trim();
 }
 
-// ── Claude call ──────────────────────────────────────────────────────────────
+// ── Claude call ───────────────────────────────────────────────────────────────
 
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
   const message = await getAI().messages.create({
@@ -415,21 +484,21 @@ function parseEmailResponse(raw: string, fallbackSubject: string): EmailDraft {
   return { subject: fallbackSubject, body: cleaned };
 }
 
-// ── Public: initial outreach email ───────────────────────────────────────────
+// ── Public: initial outreach email ────────────────────────────────────────────
 
 export async function generateOutreachEmail(
   partner: PartnerContext,
   researchContext: string,
   account: AccountContext = { previousOutreachCount: 0 },
 ): Promise<EmailDraft> {
-  const cfg    = await loadProgramConfig();
-  const region = safeRegion(partner.region);
+  const cfg      = await loadProgramConfig();
+  const region   = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
   const systemPrompt = buildSystemPrompt(cfg, region, partner.partnerType, account);
   const userPrompt   = buildUserPrompt(cfg, region, partner, greeting, 'initial', {
     researchContext,
-    introTemplate: LANGUAGE[region].INTRO,
+    // No introTemplate — engine generates cold opens from scratch
   });
 
   const raw = await callClaude(systemPrompt, userPrompt);
@@ -437,7 +506,7 @@ export async function generateOutreachEmail(
   return parseEmailResponse(raw, fallback);
 }
 
-// ── Public: nudge email (no reply received) ──────────────────────────────────
+// ── Public: nudge email (no reply received) ───────────────────────────────────
 
 export async function generateFollowUpEmail(
   partner: PartnerContext,
@@ -445,8 +514,8 @@ export async function generateFollowUpEmail(
   followUpNumber: number,
   account: AccountContext = { previousOutreachCount: 1 },
 ): Promise<EmailDraft> {
-  const cfg    = await loadProgramConfig();
-  const region = safeRegion(partner.region);
+  const cfg      = await loadProgramConfig();
+  const region   = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
   const systemPrompt = buildSystemPrompt(cfg, region, partner.partnerType, account);
@@ -461,15 +530,15 @@ export async function generateFollowUpEmail(
   return parseEmailResponse(raw, fallback);
 }
 
-// ── Public: advance email (they responded — move forward) ────────────────────
+// ── Public: advance email (they responded — move forward) ─────────────────────
 
 export async function generateAdvanceEmail(
   partner: PartnerContext,
   responseNote: string,
   account: AccountContext = { previousOutreachCount: 1 },
 ): Promise<EmailDraft> {
-  const cfg    = await loadProgramConfig();
-  const region = safeRegion(partner.region);
+  const cfg      = await loadProgramConfig();
+  const region   = safeRegion(partner.region);
   const greeting = buildGreeting(partner, region);
 
   const systemPrompt = buildSystemPrompt(cfg, region, partner.partnerType, account);
