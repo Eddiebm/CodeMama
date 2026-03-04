@@ -459,7 +459,7 @@ ${qualityGate}
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
   const message = await getAI().messages.create({
     model: 'claude-3-haiku-20240307',
-    max_tokens: 3000,
+    max_tokens: 4096,
     messages: [{ role: 'user', content: userPrompt }],
     system: systemPrompt,
   });
