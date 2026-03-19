@@ -287,6 +287,59 @@ export async function runAdvanceCycle(): Promise<CycleResult> {
   return result;
 }
 
+// ── Pre-flight Alert ─────────────────────────────────────────────────────────
+
+async function sendPreFlightAlert(): Promise<void> {
+  const to = process.env.REPORT_EMAIL || process.env.OWNER_EMAIL;
+  if (!to) return;
+
+  const cutoff = daysAgo(FOLLOW_UP_DAYS);
+  const now = new Date();
+
+  // Count what's about to go out
+  const [newPartners, nudgePartners, positivePartners] = await Promise.all([
+    db.partner.count({ where: { status: 'NEW', contactEmail: { not: null }, humanRequired: false } }),
+    db.partner.count({ where: { status: { in: Object.keys(NUDGE_LADDER) }, humanRequired: false, contactEmail: { not: null }, lastContactAt: { lte: cutoff } } }),
+    db.partner.count({ where: { status: 'POSITIVE', humanRequired: false, contactEmail: { not: null } } }),
+  ]);
+
+  const total = newPartners + nudgePartners + positivePartners;
+
+  if (total === 0) return; // nothing going out — skip the alert
+
+  const rows = [
+    newPartners   > 0 ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">🚀 Initial outreach</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;font-weight:600;">${newPartners}</td></tr>` : '',
+    nudgePartners > 0 ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">🔁 Follow-up nudges</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;font-weight:600;">${nudgePartners}</td></tr>` : '',
+    positivePartners > 0 ? `<tr><td style="padding:8px 12px;">📈 Advance (positive reply)</td><td style="padding:8px 12px;text-align:center;font-weight:600;">${positivePartners}</td></tr>` : '',
+  ].join('');
+
+  const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:32px 0;">
+<table width="580" cellpadding="0" cellspacing="0" style="margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#0e0e0e;padding:20px 28px;">
+    <span style="color:#fff;font-size:18px;font-weight:700;">CodeMama</span>
+    <span style="color:#888;font-size:13px;margin-left:12px;">Pipeline Starting</span>
+  </td></tr>
+  <tr><td style="padding:28px;">
+    <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#0e0e0e;">About to send ${total} email${total !== 1 ? 's' : ''}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#888;">${now.toUTCString()}</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:6px;border-collapse:collapse;">
+      <thead><tr style="background:#f9f9f9;">
+        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Cycle</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Queued</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin:20px 0 0;font-size:13px;color:#aaa;">You'll get a follow-up report once sending is complete.</p>
+  </td></tr>
+</table></body></html>`;
+
+  await sendOutreachEmail({
+    to,
+    subject: `[CodeMama] Sending ${total} email${total !== 1 ? 's' : ''} now — ${now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+    body: html,
+  });
+}
+
 // ── Daily Report ──────────────────────────────────────────────────────────────
 
 async function sendDailyReport(summary: {
@@ -361,6 +414,11 @@ export async function runFullAutomation(): Promise<{
   totalSent: number;
   totalErrors: number;
 }> {
+  // Send pre-flight alert before anything goes out
+  await sendPreFlightAlert().catch((e) =>
+    console.error('[automate] Pre-flight alert failed:', e.message)
+  );
+
   const results = await Promise.allSettled([
     runOutreachCycle(),
     runFollowUpCycle(),
