@@ -287,10 +287,72 @@ export async function runAdvanceCycle(): Promise<CycleResult> {
   return result;
 }
 
+// ── Daily Report ──────────────────────────────────────────────────────────────
+
+async function sendDailyReport(summary: {
+  results: CycleResult[];
+  totalSent: number;
+  totalErrors: number;
+  timestamp: string;
+}): Promise<void> {
+  const to = process.env.REPORT_EMAIL || process.env.OWNER_EMAIL;
+  if (!to) return;
+
+  const { results, totalSent, totalErrors, timestamp } = summary;
+  const date = new Date(timestamp).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  const cycleRows = results.map((r) => {
+    const errHtml = r.errors.length
+      ? `<ul style="color:#c0392b;margin:4px 0 0 16px;padding:0;font-size:13px;">${r.errors.map((e) => `<li>${e.partnerId || 'pipeline'}: ${e.error}</li>`).join('')}</ul>`
+      : '';
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-transform:capitalize;">${r.cycle}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${r.processed}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;color:#27ae60;font-weight:600;">${r.sent}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;color:#888;">${r.skipped}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;color:${r.errors.length ? '#c0392b' : '#888'};">${r.errors.length}${errHtml}</td>
+    </tr>`;
+  }).join('');
+
+  const statusColor = totalErrors > 0 ? '#c0392b' : '#27ae60';
+  const statusLabel = totalErrors > 0 ? `⚠️ ${totalErrors} error(s)` : '✅ All clear';
+
+  const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:32px 0;">
+<table width="580" cellpadding="0" cellspacing="0" style="margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#0e0e0e;padding:20px 28px;">
+    <span style="color:#fff;font-size:18px;font-weight:700;">CodeMama</span>
+    <span style="color:#888;font-size:13px;margin-left:12px;">Daily Automation Report</span>
+  </td></tr>
+  <tr><td style="padding:28px;">
+    <p style="margin:0 0 4px;font-size:22px;font-weight:700;color:#0e0e0e;">${date}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:${statusColor};font-weight:600;">${statusLabel} &nbsp;·&nbsp; ${totalSent} email${totalSent !== 1 ? 's' : ''} sent</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:6px;border-collapse:collapse;">
+      <thead><tr style="background:#f9f9f9;">
+        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Cycle</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Processed</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Sent</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Skipped</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Errors</th>
+      </tr></thead>
+      <tbody>${cycleRows}</tbody>
+    </table>
+    <p style="margin:24px 0 0;font-size:13px;color:#aaa;">Run at ${new Date(timestamp).toUTCString()}</p>
+  </td></tr>
+</table></body></html>`;
+
+  await sendOutreachEmail({
+    to,
+    subject: `CodeMama Report — ${totalSent} sent, ${totalErrors} error${totalErrors !== 1 ? 's' : ''} · ${date}`,
+    body: html,
+  });
+}
+
 // ── Full Pipeline ─────────────────────────────────────────────────────────────
 
 /**
- * Run all three cycles in sequence and return a combined summary.
+ * Run all three cycles in sequence, then email a daily report to REPORT_EMAIL.
  */
 export async function runFullAutomation(): Promise<{
   ok: boolean;
@@ -311,11 +373,18 @@ export async function runFullAutomation(): Promise<{
       : ({ cycle: 'unknown', processed: 0, sent: 0, skipped: 0, errors: [{ partnerId: '', error: String((r as any).reason) }] } as CycleResult)
   );
 
-  return {
+  const summary = {
     ok: true,
     timestamp: new Date().toISOString(),
     results: settled,
     totalSent: settled.reduce((s, r) => s + r.sent, 0),
     totalErrors: settled.reduce((s, r) => s + r.errors.length, 0),
   };
+
+  // Fire-and-forget — don't let a report failure break the pipeline
+  sendDailyReport(summary).catch((e) =>
+    console.error('[automate] Report email failed:', e.message)
+  );
+
+  return summary;
 }
